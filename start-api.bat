@@ -8,5 +8,5 @@ echo GROQ_API_KEY and DATABASE_URL before starting!
 echo.
 echo Starting the Backend API Server...
 cd apps\api
-call npx tsx src\index.ts
+call npm run dev
 pause
