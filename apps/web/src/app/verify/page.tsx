@@ -14,6 +14,7 @@ export default function VerifyPage() {
   const [apiKey, setApiKey] = useState<string | null>(null);
 
   const [resumeFiles, setResumeFiles] = useState<File[]>([]);
+  const [certificateFiles, setCertificateFiles] = useState<File[]>([]);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -39,6 +40,50 @@ export default function VerifyPage() {
     setProgress(10); // Start progress
 
     try {
+      // 0. Process Certificates
+      const certPromises = certificateFiles.map(async (file) => {
+        const formData = new FormData();
+        formData.append("certificate", file);
+        
+        const certRes = await fetch("http://localhost:4000/api/forensics/analyze", {
+          method: "POST",
+          body: formData,
+          headers: {
+            "x-api-key": apiKey || ""
+          }
+        });
+        
+        if (!certRes.ok) {
+          let errMsg = `Failed to analyze certificate: ${file.name}`;
+          try {
+            const textData = await certRes.text();
+            try {
+              const errData = JSON.parse(textData);
+              if (errData.error) errMsg += ` - ${errData.error}`;
+            } catch {
+              // Not JSON, probably HTML error page from Express
+              const match = textData.match(/<pre>(.*?)<\/pre>/s) || textData.match(/Error: (.*?)(?:<br|\n)/);
+              if (match && match[1]) {
+                errMsg += ` - ${match[1].trim()}`;
+              } else {
+                errMsg += ` - HTTP ${certRes.status}`;
+              }
+            }
+          } catch(e) {}
+          throw new Error(errMsg);
+        }
+        
+        const certData = await certRes.json();
+        if (certData.success && certData.data) {
+          certData.data.title = file.name;
+          certData.data.issuer = certData.data.metadata.creator || "Unknown Issuer";
+          return certData.data;
+        }
+        throw new Error(`Invalid response for certificate: ${file.name}`);
+      });
+
+      const certificateAnalyses = await Promise.all(certPromises);
+
       // 1. Submit to Intake API
       const res = await fetch("http://localhost:4000/api/verification/intake", {
         method: "POST",
@@ -52,7 +97,8 @@ export default function VerifyPage() {
           email,
           githubUrl: `https://github.com/${githubUsername}`,
           resumeFileUrl: "dummy-url",
-          certificateUrls: []
+          certificateUrls: [],
+          certificateAnalyses
         })
       });
 
@@ -211,7 +257,7 @@ export default function VerifyPage() {
 
                 <div className="border-y border-[var(--border)] py-6 space-y-6">
                   <FileDropZone label="Resume PDF" required onFilesChange={setResumeFiles} />
-                  <FileDropZone label="Certificates (optional)" multiple />
+                  <FileDropZone label="Certificates (optional)" multiple onFilesChange={setCertificateFiles} />
                 </div>
 
                 <div className="pt-2">

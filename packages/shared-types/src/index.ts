@@ -53,6 +53,7 @@ export interface VerificationJob {
   errorMsg?: string;
   githubMetricsJson?: string;
   resumeDataJson?: string;
+  certificateDataJson?: string;
   report?: AuditReport;
   createdAt: Date;
 }
@@ -77,6 +78,7 @@ export interface CreateCandidateRequest {
   githubUrl?: string;
   resumeFileUrl: string;
   certificateUrls: string[];
+  certificateAnalyses?: any[];
 }
 
 export interface CreateCandidateResponse {

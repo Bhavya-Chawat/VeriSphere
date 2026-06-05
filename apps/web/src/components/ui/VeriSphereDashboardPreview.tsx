@@ -220,8 +220,21 @@ export function VeriSphereDashboardPreview() {
   const [liveData, setLiveData] = useState<{name: string, initials: string, score: number, skills: string[], commits: number} | null>(null);
 
   useEffect(() => {
-    fetch('/api/verification/dashboard')
-      .then(res => res.json())
+    const key = typeof window !== "undefined" ? localStorage.getItem("verisphere_api_key") : null;
+    if (!key) {
+      // If no API key is found, do not fetch from the backend; keep the default preview/mock data
+      return;
+    }
+
+    fetch("http://localhost:4000/api/verification/dashboard", {
+      headers: { "x-api-key": key }
+    })
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
       .then(data => {
         if (data && data.length > 0) {
           const job = data[0];

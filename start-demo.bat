@@ -22,10 +22,10 @@ if exist "apps\web\.next" (
 echo.
 
 echo [1/2] Starting Backend API Server (Port 4000)...
-start "VeriSphere API" cmd /k "pnpm --filter api dev"
+start "VeriSphere API" cmd /k "npx pnpm --filter api dev"
 
 echo [2/2] Starting Frontend Next.js Web App (Port 3000)...
-start "VeriSphere Web" cmd /k "pnpm --filter web dev"
+start "VeriSphere Web" cmd /k "npx pnpm --filter web dev"
 
 echo.
 echo -------------------------------------------------------

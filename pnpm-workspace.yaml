@@ -7,12 +7,5 @@ allowBuilds:
   '@prisma/engines': true
   esbuild: true
   prisma: true
-  puppeteer: set this to true or false
+  puppeteer: true
   sharp: true
-
-onlyBuiltDependencies:
-  - "@prisma/client"
-  - "@prisma/engines"
-  - "prisma"
-  - "sharp"
-  - "esbuild"

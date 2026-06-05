@@ -114,7 +114,7 @@ export function createVerificationRouter(
       return res.status(404).json({ error: err.message });
     }
 
-    return res.status(500).json({ error: "Internal server error." });
+    return res.status(500).json({ error: "Internal server error.", details: err.message, stack: err.stack });
   });
 
   return router;

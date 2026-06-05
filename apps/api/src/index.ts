@@ -18,7 +18,8 @@ const PORT = process.env.PORT || 4000;
 
 app.use(helmet());
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(morgan("combined"));
 
 import { PrismaClient } from '@prisma/client';
@@ -73,6 +74,15 @@ app.get("/health", (req, res) => {
 // Route mount
 app.use("/api/verification", createVerificationRouter(uploadUseCase, mockJobRepo));
 app.use("/api/forensics", createForensicsRouter());
+
+// Global Error Handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("[Global Error]", err);
+  res.status(err.status || 500).json({
+    success: false,
+    error: err.message || "Internal Server Error"
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`[VeriSphere API] Running on http://localhost:${PORT}`);

@@ -25,7 +25,9 @@ export class VerificationOrchestrator {
     job: VerificationJob, 
     resume: ResumeData, 
     githubMetrics: GithubProfileMetrics,
-    certificateValidityScore: number = 100
+    certificateValidityScore: number = 100,
+    certificateAnalyses?: any[],
+    riskIndicatorsFromCerts: any[] = []
   ): Promise<AuditReport> {
     
     console.log(`[Orchestrator] Starting verification for Job ID: ${job.id}`);
@@ -69,7 +71,7 @@ export class VerificationOrchestrator {
       findingsSummary: aiResponse.findingsSummary || "No summary provided.",
       semanticMatchJson: JSON.stringify(aiResponse.semanticMatches || []),
       contradictions: aiResponse.contradictions || [],
-      riskIndicatorsJson: JSON.stringify(aiResponse.riskIndicators || []),
+      riskIndicatorsJson: JSON.stringify([...(aiResponse.riskIndicators || []), ...riskIndicatorsFromCerts]),
       trustScore: trustScoreValue
     };
 
@@ -94,7 +96,8 @@ export class VerificationOrchestrator {
           status: "COMPLETED",
           completedAt: new Date(),
           githubMetricsJson: JSON.stringify(githubMetrics),
-          resumeDataJson: JSON.stringify(resume)
+          resumeDataJson: JSON.stringify(resume),
+          certificateDataJson: certificateAnalyses ? JSON.stringify(certificateAnalyses) : undefined
         }
       });
       
@@ -110,7 +113,7 @@ export class VerificationOrchestrator {
   /**
    * Triggers the verification pipeline asynchronously in the background.
    */
-  public async triggerVerification(jobId: string, candidateId: string): Promise<void> {
+  public async triggerVerification(jobId: string, candidateId: string, certificateAnalyses?: any[]): Promise<void> {
     // Run the pipeline asynchronously without blocking the intake request
     (async () => {
       try {
@@ -198,7 +201,29 @@ export class VerificationOrchestrator {
           }
         }
 
-        await this.executeVerification(job, resume, githubMetrics);
+        let certificateValidityScore = 100;
+        let riskIndicatorsFromCerts: any[] = [];
+        
+        if (certificateAnalyses && certificateAnalyses.length > 0) {
+          const totalScore = certificateAnalyses.reduce((acc, analysis) => acc + (analysis.trustScore || 0), 0);
+          certificateValidityScore = Math.round(totalScore / certificateAnalyses.length);
+          
+          certificateAnalyses.forEach(analysis => {
+            if (analysis.findings) {
+              analysis.findings.forEach((f: any) => {
+                if (f.isAnomaly || f.severity === 'HIGH' || f.severity === 'CRITICAL') {
+                  riskIndicatorsFromCerts.push({
+                    type: 'Certificate Anomaly',
+                    description: f.description,
+                    level: f.severity
+                  });
+                }
+              });
+            }
+          });
+        }
+
+        await this.executeVerification(job, resume, githubMetrics, certificateValidityScore, certificateAnalyses, riskIndicatorsFromCerts);
       } catch (error: any) {
         console.error(`[Orchestrator] Asynchronous verification failed for Job ${jobId}:`, error);
         try {

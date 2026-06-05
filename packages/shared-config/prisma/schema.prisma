@@ -30,6 +30,7 @@ model VerificationJob {
   errorMsg          String?
   githubMetricsJson String?      // Stores raw GitHub engine output
   resumeDataJson    String?      // Stores raw Forensics engine output
+  certificateDataJson String?    // Stores raw Certificate Forensics output
   report            AuditReport?
   createdAt         DateTime     @default(now())
 }
