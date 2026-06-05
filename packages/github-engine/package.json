@@ -1,16 +1,22 @@
 {
   "name": "@verisphere/github-engine",
   "version": "1.0.0",
-  "main": "dist/repositoryCollector.js",
-  "types": "dist/repositoryCollector.d.ts",
+  "description": "GitHub evidence scraper for the VeriSphere candidate verification platform.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "private": true,
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "github:test": "ts-node -P tsconfig.json src/runner.ts"
   },
   "dependencies": {
-    "@verisphere/shared-types": "workspace:^1.0.0"
+    "@octokit/rest": "^20.1.2",
+    "@verisphere/shared-types": "workspace:^1.0.0",
+    "dotenv": "^16.6.1"
   },
   "devDependencies": {
+    "@types/node": "^20.19.41",
+    "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   }
 }
