@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { AuditReport } from '@verisphere/shared-types';
+import { AuditReport } from '../../../shared-types/src/index';
 
 export class MockAIProvider {
   /**

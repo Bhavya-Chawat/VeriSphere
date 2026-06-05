@@ -1,10 +1,10 @@
-import { AILayer, SYSTEM_PROMPT_VERIFICATION, TrustCalculator } from '@verisphere/ai-layer';
+import { AILayer, SYSTEM_PROMPT_VERIFICATION, TrustCalculator } from '../../../../packages/ai-layer/src/index';
 import { 
   AuditReport, 
   VerificationJob, 
   ResumeData,
   GithubProfileMetrics
-} from '@verisphere/shared-types';
+} from '../../../../packages/shared-types/src/index';
 import { PrismaClient } from '@prisma/client';
 
 export class VerificationOrchestrator {
