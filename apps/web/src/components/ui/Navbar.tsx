@@ -25,8 +25,7 @@ export function Navbar() {
   const navLinks = [
     { name: "Home", href: "/" },
     { name: "Verify Candidate", href: "/verify" },
-    { name: "Sample Report", href: "/report/demo" },
-    { name: "Dashboard", href: "/report/VSP-2024-00847" },
+    { name: "Dashboard", href: "/dashboard" },
   ];
 
   const isLinkActive = (href: string) => {

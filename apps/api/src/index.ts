@@ -43,7 +43,12 @@ const mockCandidateRepo = {
 };
 
 const mockJobRepo = {
-  findById: async (id: string) => null,
+  findById: async (id: string) => {
+    return prisma.verificationJob.findUnique({
+      where: { id },
+      include: { report: true, candidate: true }
+    });
+  },
   create: async (cId: string) => {
     const job = await prisma.verificationJob.create({
       data: {

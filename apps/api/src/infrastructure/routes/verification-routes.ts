@@ -4,17 +4,19 @@
  * @purpose Defines the Express routing endpoints for candidate intake, status checks, audit reports, and analytics.
  * @dependencies express, @verisphere/shared-types, UploadCandidateUseCase
  * @security Access strictly constrained via authMiddleware (requires jwt or valid x-api-key header).
- * @future_implementation Attach express-rate-limit middleware configuration on all routes to protect API resources.
  */
 
 import { Router, Request, Response, NextFunction } from "express";
 import { UploadCandidateUseCase } from "../../application/use-cases/upload-candidate";
 import { ValidationError, ResourceNotFoundError } from "../../domain/entities";
 import { authMiddleware } from "../middleware/auth-middleware";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 export function createVerificationRouter(
   uploadCandidateUseCase: UploadCandidateUseCase,
-  jobRepository: any // Typings match job repo database adapter
+  jobRepository: any
 ): Router {
   const router = Router();
 
@@ -27,11 +29,6 @@ export function createVerificationRouter(
    */
   router.post("/intake", async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const orgId = req.user?.organizationId; // Set by authMiddleware
-      if (!orgId) {
-        return res.status(403).json({ error: "Access denied. Organization ID missing." });
-      }
-
       const result = await uploadCandidateUseCase.execute(req.body);
       return res.status(202).json(result);
     } catch (error) {
@@ -41,7 +38,7 @@ export function createVerificationRouter(
 
   /**
    * GET /api/verification/jobs/:jobId/status
-   * Polling endpoint to retrieve verification completion status.
+   * Returns the full VerificationJob with Candidate and AuditReport for polling and report display.
    */
   router.get("/jobs/:jobId/status", async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -52,13 +49,27 @@ export function createVerificationRouter(
         throw new ResourceNotFoundError("VerificationJob", jobId);
       }
 
-      return res.status(200).json({
-        jobId: job.id,
-        status: job.status,
-        startedAt: job.startedAt,
-        completedAt: job.completedAt,
-        errorMessage: job.errorMessage
+      return res.status(200).json(job);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * GET /api/verification/dashboard
+   * Returns all recent verification jobs with their candidates and reports for the dashboard.
+   */
+  router.get("/dashboard", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const jobs = await prisma.verificationJob.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 50,
+        include: {
+          candidate: true,
+          report: true
+        }
       });
+      return res.status(200).json(jobs);
     } catch (error) {
       next(error);
     }

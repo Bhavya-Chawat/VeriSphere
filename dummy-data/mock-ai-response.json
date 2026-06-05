@@ -1,27 +1,65 @@
 {
-  "findingsSummary": "The candidate has a solid background in frontend development with strong React and TypeScript skills, matching their claims. GitHub activity shows consistent contributions.",
+  "findingsSummary": "Arjun Sharma has a strong backend development profile with well-evidenced Node.js and PostgreSQL skills. GitHub activity shows consistent open-source contributions. Minor gap found between claimed 5 years of experience and account age. Certificate metadata appears clean.",
   "semanticMatches": [
     {
-      "claimedSkill": "React",
-      "matchedRepo": "ecommerce-frontend",
-      "evidenceLevel": "STRONG",
-      "notes": "Found multiple commits involving React hooks and components."
+      "skill": "Node.js",
+      "confidenceScore": 0.94,
+      "matchedRepo": "fintrack-api",
+      "notes": "Found 240+ commits with Express routing, middleware, and async patterns across 3 repositories."
     },
     {
-      "claimedSkill": "PostgreSQL",
-      "matchedRepo": "ecommerce-backend",
-      "evidenceLevel": "MODERATE",
-      "notes": "Found database schema definitions but limited complex queries."
+      "skill": "React",
+      "confidenceScore": 0.88,
+      "matchedRepo": "fintrack-frontend",
+      "notes": "Strong evidence in hooks, context, and Redux integration. Component architecture is mature."
+    },
+    {
+      "skill": "PostgreSQL",
+      "confidenceScore": 0.81,
+      "matchedRepo": "fintrack-api",
+      "notes": "Found complex SQL migrations, indexing strategies, and Prisma ORM usage."
+    },
+    {
+      "skill": "TypeScript",
+      "confidenceScore": 0.91,
+      "matchedRepo": "fintrack-api",
+      "notes": "End-to-end typed codebase with generics, utility types, and strict mode enabled."
+    },
+    {
+      "skill": "Docker",
+      "confidenceScore": 0.62,
+      "matchedRepo": "devops-playground",
+      "notes": "Dockerfile and docker-compose present but limited production deployment evidence."
+    },
+    {
+      "skill": "AWS",
+      "confidenceScore": 0.35,
+      "matchedRepo": null,
+      "notes": "Claimed on resume but no infrastructure-as-code or deployment scripts found in repositories."
     }
   ],
-  "contradictions": [],
-  "riskIndicators": [],
+  "contradictions": [
+    "Resume claims 5 years of professional experience but GitHub account is only 3 years old.",
+    "AWS expertise claimed but no cloud configuration files found in any public repository."
+  ],
+  "riskIndicators": [
+    {
+      "type": "EXPERIENCE_GAP",
+      "level": "MEDIUM",
+      "description": "Account age of 3 years does not corroborate the claimed 5 years of experience. Consider asking for private repo access or employment records."
+    },
+    {
+      "type": "UNVERIFIED_SKILL",
+      "level": "LOW",
+      "description": "AWS claim has zero GitHub evidence. Candidate may have enterprise-only cloud experience not visible in public repositories."
+    }
+  ],
   "trustScore": {
-    "overallScore": 85,
-    "resumeConsistency": 90,
-    "githubEvidence": 80,
+    "overallScore": 78,
+    "resumeConsistency": 72,
+    "githubEvidence": 85,
     "certificateValidity": 100,
-    "contributionConfidence": 85,
-    "activityConfidence": 80
+    "contributionConfidence": 82,
+    "activityConfidence": 79
   }
 }

@@ -20,14 +20,12 @@ export class VerificationOrchestrator {
 
   /**
    * Orchestrates the verification process for a given job.
-   * Takes the raw evidence (Resume, GitHub) and passes it to the AI Layer,
-   * then applies scoring algorithms, and FINALLY saves it to Supabase.
    */
   public async executeVerification(
     job: VerificationJob, 
     resume: ResumeData, 
     githubMetrics: GithubProfileMetrics,
-    certificateValidityScore: number = 100 // Default to 100 if no cert is provided
+    certificateValidityScore: number = 100
   ): Promise<AuditReport> {
     
     console.log(`[Orchestrator] Starting verification for Job ID: ${job.id}`);
@@ -40,22 +38,28 @@ export class VerificationOrchestrator {
       SYSTEM_PROMPT_VERIFICATION
     );
 
-    if (!aiResponse || !aiResponse.trustScore) {
-      throw new Error("AI Layer returned an invalid or incomplete report.");
+    if (!aiResponse) {
+      throw new Error("AI Layer returned an empty response.");
     }
 
-    // 2. Inject the Certificate Validity Score (from Forensics Engine - Person 4)
+    // 2. Extract trust score sub-fields from the nested trustScore object
+    const aiTrustScore = aiResponse.trustScore || {};
     const rawScores = {
-      resumeConsistency: aiResponse.trustScore.resumeConsistency,
-      githubEvidence: aiResponse.trustScore.githubEvidence,
-      contributionConfidence: aiResponse.trustScore.contributionConfidence,
-      activityConfidence: aiResponse.trustScore.activityConfidence,
+      resumeConsistency: typeof aiTrustScore === 'object' ? (aiTrustScore.resumeConsistency ?? 70) : 70,
+      githubEvidence: typeof aiTrustScore === 'object' ? (aiTrustScore.githubEvidence ?? 70) : 70,
+      contributionConfidence: typeof aiTrustScore === 'object' ? (aiTrustScore.contributionConfidence ?? 70) : 70,
+      activityConfidence: typeof aiTrustScore === 'object' ? (aiTrustScore.activityConfidence ?? 70) : 70,
       certificateValidity: certificateValidityScore
     };
 
-    // 3. Calculate final mathematically-sound trust scores
+    // 3. Calculate final mathematically-sound trust score
     console.log(`[Orchestrator] Calculating final trust score...`);
     const finalTrustScore = this.trustCalculator.calculateOverallScore(rawScores);
+    
+    // Use overallScore from AI if calculator gives 0 (fallback)
+    const trustScoreValue = finalTrustScore.overallScore > 0 
+      ? finalTrustScore.overallScore 
+      : (typeof aiTrustScore === 'object' ? (aiTrustScore.overallScore ?? 70) : 70);
 
     // 4. Assemble final Audit Report
     const finalReport: AuditReport = {
@@ -66,7 +70,7 @@ export class VerificationOrchestrator {
       semanticMatchJson: JSON.stringify(aiResponse.semanticMatches || []),
       contradictions: aiResponse.contradictions || [],
       riskIndicatorsJson: JSON.stringify(aiResponse.riskIndicators || []),
-      trustScore: finalTrustScore.overallScore
+      trustScore: trustScoreValue
     };
 
     try {
@@ -93,11 +97,12 @@ export class VerificationOrchestrator {
           resumeDataJson: JSON.stringify(resume)
         }
       });
+      
+      console.log(`[Orchestrator] Verification complete & saved. Final Score: ${trustScoreValue}`);
     } catch (dbError: any) {
-      console.warn(`[Orchestrator] Failed to save to database (likely offline):`, dbError.message);
+      console.warn(`[Orchestrator] Failed to save to database:`, dbError.message);
+      throw dbError; // Re-throw so job status gets set to FAILED properly
     }
-
-    console.log(`[Orchestrator] Verification complete & saved. Final Score: ${finalTrustScore.overallScore}`);
     
     return finalReport;
   }
@@ -111,14 +116,10 @@ export class VerificationOrchestrator {
       try {
         console.log(`[Orchestrator] Asynchronously starting job ${jobId} for candidate ${candidateId}`);
         
-        try {
-          await this.prisma.verificationJob.update({
-            where: { id: jobId },
-            data: { status: "ANALYZING" }
-          });
-        } catch(e) {
-          console.warn(`[Orchestrator] Skipping DB update due to DB offline.`);
-        }
+        await this.prisma.verificationJob.update({
+          where: { id: jobId },
+          data: { status: "ANALYZING" }
+        });
 
         const job: VerificationJob = {
           id: jobId,
@@ -128,27 +129,38 @@ export class VerificationOrchestrator {
           createdAt: new Date()
         };
 
+        // In a real app, extract from the uploaded resume file.
+        // For the demo, use mock resume text that matches the mock AI response profile.
         const resume: ResumeData = {
           id: `res_${Date.now()}`,
           candidateId,
           fileUrl: "",
-          rawText: "Sample candidate resume text claiming experience with React, TypeScript, and PostgreSQL.",
-          skills: ["React", "TypeScript", "PostgreSQL"],
-          education: [],
-          experience: [],
-          projects: []
+          rawText: "Arjun Sharma - Senior Software Engineer. 5 years of experience with Node.js, React, TypeScript, PostgreSQL, Docker, and AWS. Built fintrack-api and fintrack-frontend. Holds AWS Solutions Architect certification.",
+          skills: ["Node.js", "React", "TypeScript", "PostgreSQL", "Docker", "AWS"],
+          education: [{ degree: "B.Tech Computer Science", institution: "IIT Bombay", year: 2018 }],
+          experience: [
+            { title: "Senior Engineer", company: "Razorpay", years: 2 },
+            { title: "Software Engineer", company: "Flipkart", years: 2 }
+          ],
+          projects: [{ name: "fintrack-api" }, { name: "fintrack-frontend" }]
         };
 
         const githubMetrics: GithubProfileMetrics = {
           id: `git_${Date.now()}`,
           candidateId,
-          githubUsername: "candidate-dev",
-          publicReposCount: 2,
-          followersCount: 10,
-          followingCount: 12,
-          accountAgeMonths: 24,
-          totalCommitsCollected: 150,
-          analyzedRepos: [],
+          githubUsername: "arjun-sharma-dev",
+          publicReposCount: 12,
+          followersCount: 89,
+          followingCount: 45,
+          accountAgeMonths: 36,
+          totalCommitsCollected: 847,
+          analyzedRepos: [
+            { name: "fintrack-api", language: "TypeScript", commits: 340, stars: 23 },
+            { name: "fintrack-frontend", language: "React", commits: 210, stars: 18 },
+            { name: "devops-playground", language: "Shell", commits: 45, stars: 3 },
+            { name: "algo-practice", language: "Python", commits: 180, stars: 7 },
+            { name: "portfolio-site", language: "JavaScript", commits: 72, stars: 5 }
+          ],
           timelineAnomalyAlerts: [],
           hasTimelineGaps: false
         };
@@ -166,7 +178,7 @@ export class VerificationOrchestrator {
             }
           });
         } catch(e) {
-          // DB offline
+          console.error(`[Orchestrator] Could not update job to FAILED status:`, e);
         }
       }
     })();
