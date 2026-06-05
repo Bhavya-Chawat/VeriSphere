@@ -47,7 +47,7 @@ const mockJobRepo = {
   create: async (cId: string) => ({ id: "mock-job-id", candidateId: cId, status: "QUEUED", startedAt: new Date() }),
   updateStatus: async (jId: string, status: string, error?: string) => {},
   saveResults: async () => {}
-};
+} as any;
 
 const mockStorageService = {
   fetchFileBuffer: async (url: string) => Buffer.from("pdf-data")

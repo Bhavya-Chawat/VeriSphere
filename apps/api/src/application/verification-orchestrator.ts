@@ -107,8 +107,10 @@ export class VerificationOrchestrator {
       jobId,
       {
         findingsSummary: auditResults.findingsSummary,
-        semanticMatchJson: JSON.stringify(auditResults.semanticMatches),
-        contradictions: auditResults.contradictions
+        semanticMatches: auditResults.semanticMatches,
+        contradictions: auditResults.contradictions,
+        riskIndicators: auditResults.riskIndicators as any,
+        trustScore: auditResults.trustScore
       },
       scoreBreakdown,
       questionsResults.questions
