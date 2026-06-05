@@ -24,6 +24,9 @@ export default function VerifyPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [certWarnings, setCertWarnings] = useState<string[]>([]);
+  const [generalError, setGeneralError] = useState<string | null>(null);
 
   useEffect(() => {
     const key = localStorage.getItem("verisphere_api_key");
@@ -34,38 +37,101 @@ export default function VerifyPage() {
     }
   }, [router]);
 
-  const canSubmit = resumeFiles.length > 0 && githubUsername.trim() !== "" && firstName !== "" && lastName !== "" && email !== "";
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+    if (!firstName.trim()) newErrors.firstName = "First name is required";
+    if (!lastName.trim()) newErrors.lastName = "Last name is required";
+    
+    if (!email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = "Please enter a valid email address";
+    }
+
+    if (institutionalEmail.trim() && !/\S+@\S+\.\S+/.test(institutionalEmail)) {
+      newErrors.institutionalEmail = "Please enter a valid institutional email address";
+    }
+
+    if (resumeFiles.length === 0) {
+      newErrors.resume = "Resume PDF is required for verification";
+    }
+
+    if (!githubUsername.trim()) {
+      newErrors.github = "GitHub username is required for skill validation";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async () => {
+    setGeneralError(null);
+    setCertWarnings([]);
+    
+    if (!validate()) {
+      return;
+    }
+
     setIsProcessing(true);
     setProgress(10); // Start progress
 
     try {
       // 0. Process Certificates through forensics API
-      let certificateAnalyses: any[] = [];
-      if (certificateFiles.length > 0) {
-        const certPromises = certificateFiles.map(async (file) => {
+      const certWarningsList: string[] = [];
+      const certPromises = certificateFiles.map(async (file) => {
+        try {
           const certFormData = new FormData();
           certFormData.append("certificate", file);
+          
           const certRes = await fetch("http://localhost:4000/api/forensics/analyze", {
             method: "POST",
             body: certFormData,
-            headers: { "x-api-key": apiKey || "" }
+            headers: {
+              "x-api-key": apiKey || ""
+            }
           });
+          
           if (!certRes.ok) {
-            console.warn(`Certificate analysis failed for ${file.name}`);
+            let errMsg = `Certificate "${file.name}" ignored`;
+            try {
+              const textData = await certRes.text();
+              try {
+                const errData = JSON.parse(textData);
+                if (errData.error) errMsg += `: ${errData.error}`;
+              } catch {
+                const match = textData.match(/<pre>([\s\S]*?)<\/pre>/) || textData.match(/Error: (.*?)(?:<br|\n)/);
+                if (match && match[1]) {
+                  errMsg += `: ${match[1].trim()}`;
+                } else {
+                  errMsg += ` (HTTP ${certRes.status})`;
+                }
+              }
+            } catch(e) {}
+            certWarningsList.push(errMsg);
             return null;
           }
+          
           const certData = await certRes.json();
           if (certData.success && certData.data) {
             certData.data.title = file.name;
             certData.data.issuer = certData.data.metadata?.creator || "Unknown Issuer";
             return certData.data;
           }
+          certWarningsList.push(`Invalid response format for "${file.name}".`);
           return null;
-        });
-        const results = await Promise.all(certPromises);
-        certificateAnalyses = results.filter(Boolean);
+        } catch (e: any) {
+          certWarningsList.push(`Could not process "${file.name}": ${e.message || e}`);
+          return null;
+        }
+      });
+
+      const certResults = certificateFiles.length > 0
+        ? await Promise.all(certPromises)
+        : [];
+
+      const certificateAnalyses = certResults.filter(Boolean);
+      if (certWarningsList.length > 0) {
+        setCertWarnings(certWarningsList);
       }
 
       // 1. Submit to Intake API using FormData to support file uploads
@@ -93,7 +159,12 @@ export default function VerifyPage() {
       });
 
       if (!res.ok) {
-        throw new Error("Failed to submit candidate");
+        let intakeError = "Failed to submit candidate for verification.";
+        try {
+          const errJson = await res.json();
+          if (errJson.error) intakeError = errJson.error;
+        } catch {}
+        throw new Error(intakeError);
       }
 
       const data = await res.json();
@@ -118,7 +189,7 @@ export default function VerifyPage() {
             }, 600);
           } else if (statusData.status === "FAILED") {
             clearInterval(pollInterval);
-            alert("Verification failed: " + (statusData.errorMsg || "An unknown error occurred. Check the API server logs."));
+            setGeneralError("Verification job failed: " + (statusData.errorMsg || "An unknown error occurred."));
             setIsProcessing(false);
           }
         } catch (e) {
@@ -126,9 +197,9 @@ export default function VerifyPage() {
         }
       }, 2000);
 
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Something went wrong");
+      setGeneralError(err.message || "An unexpected error occurred during submission.");
       setIsProcessing(false);
     }
   };
@@ -228,33 +299,57 @@ export default function VerifyPage() {
                     <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">First Name</label>
                     <div className="relative flex items-center">
                       <User className="absolute left-4 text-[var(--text-tertiary)]" size={18} />
-                      <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full bg-[var(--bg-subtle)] border border-[var(--border)] rounded-xl py-3 pl-12 pr-4 text-[var(--text-primary)] outline-none focus:border-[var(--brand-blue)] transition-colors" placeholder="John" />
+                      <input type="text" value={firstName} onChange={(e) => { setFirstName(e.target.value); if (errors.firstName) setErrors(prev => ({ ...prev, firstName: "" })); }} className="w-full bg-[var(--bg-subtle)] border border-[var(--border)] rounded-xl py-3 pl-12 pr-4 text-[var(--text-primary)] outline-none focus:border-[var(--brand-blue)] transition-colors" placeholder="John" />
                     </div>
+                    {errors.firstName && <p className="text-xs text-[var(--danger)] mt-1.5 ml-1">{errors.firstName}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Last Name</label>
-                    <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} className="w-full bg-[var(--bg-subtle)] border border-[var(--border)] rounded-xl py-3 px-4 text-[var(--text-primary)] outline-none focus:border-[var(--brand-blue)] transition-colors" placeholder="Doe" />
+                    <input type="text" value={lastName} onChange={(e) => { setLastName(e.target.value); if (errors.lastName) setErrors(prev => ({ ...prev, lastName: "" })); }} className="w-full bg-[var(--bg-subtle)] border border-[var(--border)] rounded-xl py-3 px-4 text-[var(--text-primary)] outline-none focus:border-[var(--brand-blue)] transition-colors" placeholder="Doe" />
+                    {errors.lastName && <p className="text-xs text-[var(--danger)] mt-1.5 ml-1">{errors.lastName}</p>}
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Email</label>
-                  <div className="relative flex items-center mb-4">
+                  <div className="relative flex items-center mb-1">
                     <Mail className="absolute left-4 text-[var(--text-tertiary)]" size={18} />
-                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-[var(--bg-subtle)] border border-[var(--border)] rounded-xl py-3 pl-12 pr-4 text-[var(--text-primary)] outline-none focus:border-[var(--brand-blue)] transition-colors" placeholder="john@example.com" />
+                    <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); if (errors.email) setErrors(prev => ({ ...prev, email: "" })); }} className="w-full bg-[var(--bg-subtle)] border border-[var(--border)] rounded-xl py-3 pl-12 pr-4 text-[var(--text-primary)] outline-none focus:border-[var(--brand-blue)] transition-colors" placeholder="john@example.com" />
                   </div>
+                  {errors.email && <p className="text-xs text-[var(--danger)] mt-1.5 mb-3 ml-1">{errors.email}</p>}
                   
-                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Institutional Email (Optional)</label>
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mt-4 mb-2">Institutional Email (Optional)</label>
                   <div className="relative flex items-center">
                     <Mail className="absolute left-4 text-[var(--text-tertiary)]" size={18} />
-                    <input type="email" value={institutionalEmail} onChange={(e) => setInstitutionalEmail(e.target.value)} className="w-full bg-[var(--bg-subtle)] border border-[var(--border)] rounded-xl py-3 pl-12 pr-4 text-[var(--text-primary)] outline-none focus:border-[var(--brand-blue)] transition-colors" placeholder="john@university.edu" />
+                    <input type="email" value={institutionalEmail} onChange={(e) => { setInstitutionalEmail(e.target.value); if (errors.institutionalEmail) setErrors(prev => ({ ...prev, institutionalEmail: "" })); }} className="w-full bg-[var(--bg-subtle)] border border-[var(--border)] rounded-xl py-3 pl-12 pr-4 text-[var(--text-primary)] outline-none focus:border-[var(--brand-blue)] transition-colors" placeholder="john@university.edu" />
                   </div>
-                  <p className="text-xs text-[var(--text-tertiary)] mt-2">Providing a .edu or institutional email speeds up academic verification.</p>
+                  {errors.institutionalEmail ? (
+                    <p className="text-xs text-[var(--danger)] mt-1.5 ml-1">{errors.institutionalEmail}</p>
+                  ) : (
+                    <p className="text-xs text-[var(--text-tertiary)] mt-2">Providing a .edu or institutional email speeds up academic verification.</p>
+                  )}
                 </div>
 
                 <div className="border-y border-[var(--border)] py-6 space-y-6">
-                  <FileDropZone label="Resume PDF" required onFilesChange={setResumeFiles} />
-                  <FileDropZone label="Certificates (optional)" multiple onFilesChange={setCertificateFiles} />
+                  <div>
+                    <FileDropZone label="Resume PDF" required onFilesChange={(files) => { setResumeFiles(files); if (errors.resume) setErrors(prev => ({ ...prev, resume: "" })); }} />
+                    {errors.resume && <p className="text-xs text-[var(--danger)] mt-1 ml-1">{errors.resume}</p>}
+                  </div>
+                  
+                  <div>
+                    <FileDropZone label="Certificates (optional)" multiple onFilesChange={setCertificateFiles} />
+                    {certWarnings.length > 0 && (
+                      <div className="mt-3 bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 space-y-1.5 text-xs text-amber-500">
+                        <p className="font-semibold text-amber-400 mb-1">Some certificates had warnings but submission will proceed:</p>
+                        {certWarnings.map((w, idx) => (
+                          <div key={idx} className="flex items-start gap-1.5">
+                            <span>•</span>
+                            <span>{w}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="pt-2">
@@ -267,7 +362,7 @@ export default function VerifyPage() {
                     <motion.input 
                       type="text" 
                       value={githubUsername}
-                      onChange={(e) => setGithubUsername(e.target.value)}
+                      onChange={(e) => { setGithubUsername(e.target.value); if (errors.github) setErrors(prev => ({ ...prev, github: "" })); }}
                       onFocus={() => setIsFocused(true)}
                       onBlur={() => setIsFocused(false)}
                       animate={{ boxShadow: isFocused ? "0 0 0 3px rgba(37,99,235,0.12), inset 0 0 0 1px var(--brand-blue)" : "none", borderColor: isFocused ? "var(--brand-blue)" : "var(--border)" }}
@@ -276,17 +371,32 @@ export default function VerifyPage() {
                       placeholder="username"
                     />
                   </div>
+                  {errors.github && <p className="text-xs text-[var(--danger)] mt-1.5 ml-1">{errors.github}</p>}
                 </div>
+
+                {generalError && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 5 }} 
+                    animate={{ opacity: 1, y: 0 }} 
+                    className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-sm text-[var(--danger)]"
+                  >
+                    {generalError}
+                  </motion.div>
+                )}
 
                 <div className="pt-6">
                   <motion.button 
                     onClick={handleSubmit}
-                    disabled={!canSubmit}
-                    whileHover={canSubmit ? { scale: 1.01, y: -1 } : {}}
-                    whileTap={canSubmit ? { scale: 0.98, y: 0 } : {}}
-                    className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-200 ${canSubmit ? 'bg-[var(--brand-blue)] text-white hover:bg-blue-700 shadow-sm' : 'bg-[var(--bg-muted)] text-[var(--text-tertiary)] cursor-not-allowed'}`}
+                    disabled={isProcessing}
+                    whileHover={!isProcessing ? { scale: 1.01, y: -1 } : {}}
+                    whileTap={!isProcessing ? { scale: 0.98, y: 0 } : {}}
+                    className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-200 ${
+                      isProcessing 
+                        ? 'bg-[var(--bg-muted)] text-[var(--text-tertiary)] cursor-not-allowed' 
+                        : 'bg-[var(--brand-blue)] text-white hover:bg-blue-700 shadow-sm'
+                    }`}
                   >
-                    Initialize Verification <ArrowRight size={18} />
+                    {isProcessing ? "Processing..." : "Initialize Verification"} <ArrowRight size={18} />
                   </motion.button>
                 </div>
               </div>

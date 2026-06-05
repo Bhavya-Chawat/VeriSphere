@@ -97,6 +97,9 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
   let academicVerification: any[] = [];
   try { if (report.academicVerificationJson) academicVerification = JSON.parse(report.academicVerificationJson); } catch(e) {}
 
+  let certificateAnalyses: any[] = [];
+  try { if (jobData.certificateDataJson) certificateAnalyses = JSON.parse(jobData.certificateDataJson); } catch(e) {}
+
 
   // Calculate dynamic pie chart data
   const languageCounts: Record<string, number> = {};
@@ -344,7 +347,29 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
             )}
             
             {activeTab === 'certificates' && (
-              <div className="text-center py-10 text-[var(--text-secondary)]">No certificates uploaded for this candidate.</div>
+              <div className="flex flex-col gap-6">
+                {certificateAnalyses.length === 0 ? (
+                  <div className="text-center py-10 text-[var(--text-secondary)]">No certificates uploaded for this candidate.</div>
+                ) : (
+                  certificateAnalyses.map((analysis, i) => (
+                    <CertificateCard 
+                      key={i} 
+                      title={analysis.title || "Certificate"} 
+                      issuer={analysis.issuer || "Unknown Issuer"} 
+                      isSuspicious={analysis.trustScore < 70} 
+                      metadata={{
+                        ...analysis.metadata,
+                        "SHA-256 Checksum": analysis.sha256,
+                        "Trust Score": `${analysis.trustScore}/100`
+                      }} 
+                      findings={analysis.findings?.map((f: any) => ({
+                        type: f.severity === 'HIGH' || f.severity === 'CRITICAL' || f.isAnomaly ? 'risk' : 'verified',
+                        text: f.description
+                      })) || []} 
+                    />
+                  ))
+                )}
+              </div>
             )}
 
             {activeTab === 'interview' && (
