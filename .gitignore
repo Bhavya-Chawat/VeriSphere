@@ -61,3 +61,12 @@ coverage/
 # OS Metadata
 [Dd]s.[Ss]tore
 [Tt]humbs.[Db]
+
+# Markdown files
+HACKATHON_GUIDE.md
+packages/github-engine/github-engine-spec.md
+packages/github-engine/github-engine-task.md
+
+# github-engine
+packages/github-engine/.env
+packages/github-engine/test_api.tsbuildinfo
