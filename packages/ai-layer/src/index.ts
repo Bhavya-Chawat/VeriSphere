@@ -1,6 +1,6 @@
 import { GroqAIProvider } from './providers/groq';
 import { MockAIProvider } from './providers/mock';
-import { AuditReport } from '@verisphere/shared-types';
+import { AuditReport } from '../../shared-types/src/index';
 
 export class AILayer {
   private groqProvider: GroqAIProvider;
