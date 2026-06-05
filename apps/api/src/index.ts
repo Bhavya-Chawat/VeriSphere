@@ -12,7 +12,6 @@ import { createVerificationRouter } from "./infrastructure/routes/verification-r
 import { createForensicsRouter } from "./modules/forensics/forensics.routes";
 import { UploadCandidateUseCase } from "./application/use-cases/upload-candidate";
 import { VerificationOrchestrator } from "./application/verification-orchestrator";
-import { GeminiProvider } from "@verisphere/ai-layer/src/providers/gemini";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -22,17 +21,46 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan("combined"));
 
-// Mock Repository Implementations conforming to domain contracts
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+
+// Real Database Implementations for Testing
 const mockCandidateRepo = {
   findById: async (id: string) => null,
   findByEmail: async (email: string) => null,
-  create: async (c: any) => ({ id: "mock-cand-id", ...c }),
+  create: async (c: any) => {
+    // Check if organization exists, if not create a default one
+    let org = await prisma.organization.findFirst();
+    if (!org) {
+      org = await prisma.organization.create({
+        data: { name: "Mock Org", slug: "mock-org" }
+      });
+    }
+    const candidate = await prisma.candidate.create({
+      data: {
+        organizationId: org.id,
+        firstName: c.firstName || "John",
+        lastName: c.lastName || "Doe",
+        email: c.email || "test@example.com",
+        githubUrl: c.githubUrl || null
+      }
+    });
+    return candidate as any;
+  },
   listAll: async (org: string) => []
 };
 
 const mockJobRepo = {
   findById: async (id: string) => null,
-  create: async (cId: string) => ({ id: "mock-job-id", candidateId: cId, status: "QUEUED", startedAt: new Date() }),
+  create: async (cId: string) => {
+    const job = await prisma.verificationJob.create({
+      data: {
+        candidateId: cId,
+        status: "QUEUED"
+      }
+    });
+    return job as any;
+  },
   updateStatus: async (jId: string, status: string, error?: string) => {},
   saveResults: async () => {}
 } as any;

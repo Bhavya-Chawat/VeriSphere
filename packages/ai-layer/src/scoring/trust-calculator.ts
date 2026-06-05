@@ -1,4 +1,4 @@
-import { TrustScoreBreakdown } from '../../../shared-types/src/index';
+import { TrustScoreBreakdown } from '@verisphere/shared-types';
 
 export class TrustCalculator {
   /**

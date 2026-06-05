@@ -1,5 +1,5 @@
 import Groq from 'groq-sdk';
-import { AuditReport } from '../../../shared-types/src/index';
+import { AuditReport } from '@verisphere/shared-types';
 
 export class GroqAIProvider {
   private groq: Groq;

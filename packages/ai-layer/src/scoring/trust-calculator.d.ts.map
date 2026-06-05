@@ -1,0 +1,1 @@
+{"version":3,"file":"trust-calculator.d.ts","sourceRoot":"","sources":["trust-calculator.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,mBAAmB,EAAE,MAAM,iCAAiC,CAAC;AAEtE,qBAAa,eAAe;IAC1B;;;;;;;OAOG;IACI,qBAAqB,CAAC,MAAM,EAAE,IAAI,CAAC,mBAAmB,EAAE,cAAc,CAAC,GAAG,mBAAmB;CAoBrG"}
