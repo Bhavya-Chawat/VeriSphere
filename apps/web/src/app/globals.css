@@ -3,23 +3,133 @@
 @tailwind utilities;
 
 :root {
-  --background: 224 71% 4%;
-  --foreground: 213 31% 91%;
-  --card: 224 71% 4%;
-  --card-foreground: 213 31% 91%;
-  --popover: 224 71% 4%;
-  --popover-foreground: 215 20.2% 65.1%;
-  --primary: 160 84% 39%; /* Emerald HSL */
-  --primary-foreground: 210 40% 98%;
-  --secondary: 222.2 47.4% 11.2%;
-  --secondary-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 160 84% 39%;
+  /* Backgrounds */
+  --bg-page: #F8F7F4;        /* warm off-white page background */
+  --bg-surface: #FFFFFF;     /* card/panel white */
+  --bg-subtle: #F1F0ED;      /* section alternates, input backgrounds */
+  --bg-muted: #E8E6E1;       /* dividers, skeleton loaders */
+  --bg-nav: rgba(255, 255, 255, 0.92);
+
+  /* Brand */
+  --brand-navy: #1B3A6B;     /* primary brand, headings, authority */
+  --brand-blue: #2563EB;     /* CTAs, links, active states */
+  --brand-blue-light: #EFF6FF; /* blue tint backgrounds */
+
+  /* Semantic */
+  --verified: #16A34A;       /* verified/pass — green */
+  --verified-bg: #F0FDF4;
+  --warning: #D97706;        /* unverified/caution — amber */
+  --warning-bg: #FFFBEB;
+  --danger: #DC2626;         /* risk/fail — red */
+  --danger-bg: #FEF2F2;
+  --neutral: #6B7280;        /* secondary text */
+
+  /* Typography */
+  --text-primary: #111827;
+  --text-secondary: #4B5563;
+  --text-tertiary: #9CA3AF;
+
+  /* Borders & Shadows */
+  --border: #E5E3DF;
+  --border-strong: #D1CFC9;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.07), 0 2px 6px rgba(0,0,0,0.04);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+}
+
+:root[data-theme="dark"] {
+  /* Backgrounds */
+  --bg-page: #0F1115;        /* Deep Charcoal page background */
+  --bg-surface: #171A21;     /* Elevated card/panel */
+  --bg-subtle: #1D212B;      /* Secondary panels, inputs */
+  --bg-muted: #232834;       /* Dividers, skeleton loaders */
+  --bg-nav: rgba(15, 17, 21, 0.92);
+
+  /* Brand */
+  --brand-navy: #4F8CFF;     /* Adapted brand blue for dark mode */
+  --brand-blue: #3B82F6;     /* Slightly lighter blue for dark mode CTAs */
+  --brand-blue-light: rgba(59, 130, 246, 0.15); /* blue tint backgrounds */
+
+  /* Semantic - Keeping states consistent but optimized for dark bg */
+  --verified: #22C55E;       /* verified/pass — green */
+  --verified-bg: rgba(34, 197, 94, 0.1);
+  --warning: #F59E0B;        /* unverified/caution — amber */
+  --warning-bg: rgba(245, 158, 11, 0.1);
+  --danger: #EF4444;         /* risk/fail — red */
+  --danger-bg: rgba(239, 68, 68, 0.1);
+  --neutral: #8892A0;        /* secondary text */
+
+  /* Typography */
+  --text-primary: #F5F7FA;
+  --text-secondary: #B8C0CC;
+  --text-tertiary: #8892A0;
+
+  /* Borders & Shadows */
+  --border: #2A2F3A;
+  --border-strong: #3A4150;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.2);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* Global transitions for theme switching */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+  transition-duration: 250ms;
+  transition-timing-function: ease-in-out;
 }
 
 body {
-  font-family: 'Outfit', sans-serif;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+}
+
+/* Animations */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 5s ease-in-out infinite;
+}
+
+.dot-pattern {
+  background-image: radial-gradient(rgba(27, 58, 107, 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Shimmer skeleton loader */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-muted) 25%,
+    var(--bg-subtle) 50%,
+    var(--bg-muted) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+/* Reduced-motion: suppress all animations */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .animate-float {
+    animation: none;
+  }
+  .skeleton {
+    animation: none;
+    background: var(--bg-muted);
+  }
 }

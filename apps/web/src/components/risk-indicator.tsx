@@ -69,7 +69,7 @@ export function RiskIndicatorWidget({ risks }: RiskWidgetProps) {
               <div className="text-xs font-bold uppercase tracking-wider text-slate-400">{risk.category}</div>
               <h4 className="font-semibold text-white text-sm mt-0.5">{risk.description}</h4>
             </div>
-            <span className="ml-auto text-[10px] font-extrabold uppercase px-2 py-0.5 rounded border border-current bg-white/5">
+            <span className="ml-auto text-[10px] font-extrabold uppercase px-2 py-0.5 rounded border border-current bg-[var(--bg-surface)]/5">
               {risk.severity}
             </span>
           </div>
