@@ -5,13 +5,14 @@ import morgan from "morgan";
 import * as dotenv from "dotenv";
 import path from "path";
 
+// Load environment variables
+dotenv.config();
+
 import { createVerificationRouter } from "./infrastructure/routes/verification-routes";
 import { createForensicsRouter } from "./modules/forensics/forensics.routes";
 import { UploadCandidateUseCase } from "./application/use-cases/upload-candidate";
 import { VerificationOrchestrator } from "./application/verification-orchestrator";
 import { GeminiProvider } from "@verisphere/ai-layer/src/providers/gemini";
-
-import { VerificationOrchestrator } from "./application/verification-orchestrator";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -37,6 +38,7 @@ const mockJobRepo = {
 } as any;
 
 const orchestrator = new VerificationOrchestrator();
+const uploadUseCase = new UploadCandidateUseCase(mockCandidateRepo, mockJobRepo, orchestrator);
 
 // Health Check
 app.get("/health", (req, res) => {

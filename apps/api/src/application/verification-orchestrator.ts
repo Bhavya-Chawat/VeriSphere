@@ -76,29 +76,107 @@ export class VerificationOrchestrator {
         id: finalReport.id,
         jobId: finalReport.jobId,
         findingsSummary: finalReport.findingsSummary,
-        semanticMatches: JSON.stringify(finalReport.semanticMatches),
-        contradictions: JSON.stringify(finalReport.contradictions),
-        riskIndicators: JSON.stringify(finalReport.riskIndicators),
-        trustScore: JSON.stringify(finalReport.trustScore)
+        semanticMatchJson: JSON.stringify(finalReport.semanticMatches),
+        contradictions: finalReport.contradictions
       }
     });
 
-    // STEP 7: Save everything to DB and set status to COMPLETED
-    await this.jobRepo.saveResults(
-      jobId,
-      {
-        findingsSummary: auditResults.findingsSummary,
-        semanticMatches: auditResults.semanticMatches,
-        contradictions: auditResults.contradictions,
-        riskIndicators: auditResults.riskIndicators as any,
-        trustScore: auditResults.trustScore
-      },
-      scoreBreakdown,
-      questionsResults.questions
-    );
+    await this.prisma.trustScore.create({
+      data: {
+        jobId: job.id,
+        overallScore: finalTrustScore.overallScore,
+        resumeConsistency: finalTrustScore.resumeConsistency,
+        githubEvidence: finalTrustScore.githubEvidence,
+        certificateValidity: finalTrustScore.certificateValidity,
+        contributionConfidence: finalTrustScore.contributionConfidence,
+        activityConfidence: finalTrustScore.activityConfidence
+      }
+    });
+
+    if (finalReport.riskIndicators && finalReport.riskIndicators.length > 0) {
+      await this.prisma.riskIndicator.createMany({
+        data: finalReport.riskIndicators.map((r: any) => ({
+          jobId: job.id,
+          category: r.category,
+          severity: r.severity,
+          description: r.description,
+          evidence: r.evidence
+        }))
+      });
+    }
+
+    // Update job status to COMPLETED
+    await this.prisma.verificationJob.update({
+      where: { id: job.id },
+      data: {
+        status: "COMPLETED",
+        completedAt: new Date()
+      }
+    });
 
     console.log(`[Orchestrator] Verification complete & saved. Final Score: ${finalTrustScore.overallScore}`);
     
     return finalReport;
+  }
+
+  /**
+   * Triggers the verification pipeline asynchronously in the background.
+   */
+  public async triggerVerification(jobId: string, candidateId: string): Promise<void> {
+    // Run the pipeline asynchronously without blocking the intake request
+    (async () => {
+      try {
+        console.log(`[Orchestrator] Asynchronously starting job ${jobId} for candidate ${candidateId}`);
+        
+        await this.prisma.verificationJob.update({
+          where: { id: jobId },
+          data: { status: "ANALYZING" }
+        });
+
+        const job: VerificationJob = {
+          id: jobId,
+          candidateId,
+          status: "ANALYZING" as any,
+          startedAt: new Date()
+        };
+
+        const resume: ResumeData = {
+          id: `res_${Date.now()}`,
+          candidateId,
+          fileUrl: "",
+          rawText: "Sample candidate resume text claiming experience with React, TypeScript, and PostgreSQL.",
+          skills: ["React", "TypeScript", "PostgreSQL"],
+          education: [],
+          experience: [],
+          projects: []
+        };
+
+        const githubMetrics: GithubProfileMetrics = {
+          id: `git_${Date.now()}`,
+          candidateId,
+          githubUsername: "candidate-dev",
+          publicReposCount: 2,
+          followersCount: 10,
+          followingCount: 12,
+          accountAgeMonths: 24,
+          totalCommitsCollected: 150,
+          analyzedRepos: [],
+          timelineAnomalyAlerts: [],
+          hasTimelineGaps: false
+        };
+
+        await this.executeVerification(job, resume, githubMetrics);
+      } catch (error: any) {
+        console.error(`[Orchestrator] Asynchronous verification failed for Job ${jobId}:`, error);
+        await this.prisma.verificationJob.update({
+          where: { id: jobId },
+          data: { 
+            status: "FAILED",
+            errorMsg: error?.message || String(error),
+            completedAt: new Date()
+          }
+        });
+      }
+    })();
   }
 }

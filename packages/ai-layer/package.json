@@ -8,7 +8,9 @@
   },
   "dependencies": {
     "@verisphere/shared-types": "workspace:*",
-    "groq-sdk": "^0.3.2"
+    "groq-sdk": "^0.3.2",
+    "@google/generative-ai": "^0.21.0",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "typescript": "^5.0.0",
