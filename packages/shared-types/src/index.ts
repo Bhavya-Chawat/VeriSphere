@@ -249,3 +249,6 @@ export interface VerificationReportResponse {
   report: AuditReport;
   questions: InterviewQuestion[];
 }
+
+export * from "./forensics";
+

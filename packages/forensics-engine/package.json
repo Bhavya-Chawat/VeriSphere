@@ -1,16 +1,19 @@
 {
   "name": "@verisphere/forensics-engine",
   "version": "1.0.0",
-  "main": "dist/pdfParser.js",
-  "types": "dist/pdfParser.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "private": true,
   "scripts": {
     "build": "tsc"
   },
   "dependencies": {
-    "@verisphere/shared-types": "workspace:^1.0.0"
+    "@verisphere/shared-types": "workspace:^1.0.0",
+    "pdf-parse": "^2.4.5"
   },
   "devDependencies": {
+    "@types/node": "^20.19.41",
+    "@types/pdf-parse": "^1.1.5",
     "typescript": "^5.3.3"
   }
 }

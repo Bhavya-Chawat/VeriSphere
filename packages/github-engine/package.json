@@ -1,8 +1,8 @@
 {
   "name": "@verisphere/github-engine",
   "version": "1.0.0",
-  "main": "dist/repositoryCollector.js",
-  "types": "dist/repositoryCollector.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "private": true,
   "scripts": {
     "build": "tsc"

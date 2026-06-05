@@ -83,14 +83,19 @@ export class VerificationOrchestrator {
       }
     });
 
-    // Mark job as completed
-    await this.prisma.verificationJob.update({
-      where: { id: job.id },
-      data: {
-        status: "COMPLETED",
-        completedAt: new Date()
-      }
-    });
+    // STEP 7: Save everything to DB and set status to COMPLETED
+    await this.jobRepo.saveResults(
+      jobId,
+      {
+        findingsSummary: auditResults.findingsSummary,
+        semanticMatches: auditResults.semanticMatches,
+        contradictions: auditResults.contradictions,
+        riskIndicators: auditResults.riskIndicators as any,
+        trustScore: auditResults.trustScore
+      },
+      scoreBreakdown,
+      questionsResults.questions
+    );
 
     console.log(`[Orchestrator] Verification complete & saved. Final Score: ${finalTrustScore.overallScore}`);
     
