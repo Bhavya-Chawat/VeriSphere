@@ -34,7 +34,7 @@ export class VerificationOrchestrator {
     
     // 1. Send data to AI Layer for extraction and semantic matching
     console.log(`[Orchestrator] Calling AI Layer...`);
-    const aiResponse = await this.aiLayer.analyzeCandidate(
+    const aiResponse: any = await this.aiLayer.analyzeCandidate(
       resume.rawText, 
       githubMetrics, 
       SYSTEM_PROMPT_VERIFICATION
@@ -61,12 +61,12 @@ export class VerificationOrchestrator {
     const finalReport: AuditReport = {
       id: `rep_${Date.now()}`,
       jobId: job.id,
-      generatedAt: new Date(),
+      createdAt: new Date(),
       findingsSummary: aiResponse.findingsSummary || "No summary provided.",
-      semanticMatches: aiResponse.semanticMatches || [],
+      semanticMatchJson: JSON.stringify(aiResponse.semanticMatches || []),
       contradictions: aiResponse.contradictions || [],
-      riskIndicators: aiResponse.riskIndicators || [],
-      trustScore: finalTrustScore
+      riskIndicatorsJson: JSON.stringify(aiResponse.riskIndicators || []),
+      trustScore: finalTrustScore.overallScore
     };
 
     try {
@@ -74,44 +74,23 @@ export class VerificationOrchestrator {
       console.log(`[Orchestrator] Saving Report to Supabase...`);
       await this.prisma.auditReport.create({
         data: {
-          id: finalReport.id,
           jobId: finalReport.jobId,
           findingsSummary: finalReport.findingsSummary,
-          semanticMatchJson: JSON.stringify(finalReport.semanticMatches),
-          contradictions: finalReport.contradictions
+          semanticMatchJson: finalReport.semanticMatchJson,
+          contradictions: finalReport.contradictions,
+          trustScore: finalReport.trustScore,
+          riskIndicatorsJson: finalReport.riskIndicatorsJson
         }
       });
 
-      await this.prisma.trustScore.create({
-        data: {
-          jobId: job.id,
-          overallScore: finalTrustScore.overallScore,
-          resumeConsistency: finalTrustScore.resumeConsistency,
-          githubEvidence: finalTrustScore.githubEvidence,
-          certificateValidity: finalTrustScore.certificateValidity,
-          contributionConfidence: finalTrustScore.contributionConfidence,
-          activityConfidence: finalTrustScore.activityConfidence
-        }
-      });
-
-      if (finalReport.riskIndicators && finalReport.riskIndicators.length > 0) {
-        await this.prisma.riskIndicator.createMany({
-          data: finalReport.riskIndicators.map((r: any) => ({
-            jobId: job.id,
-            category: r.category,
-            severity: r.severity,
-            description: r.description,
-            evidence: r.evidence
-          }))
-        });
-      }
-
-      // Update job status to COMPLETED
+      // Update job status to COMPLETED and attach raw JSON data
       await this.prisma.verificationJob.update({
         where: { id: job.id },
         data: {
           status: "COMPLETED",
-          completedAt: new Date()
+          completedAt: new Date(),
+          githubMetricsJson: JSON.stringify(githubMetrics),
+          resumeDataJson: JSON.stringify(resume)
         }
       });
     } catch (dbError: any) {
@@ -145,7 +124,8 @@ export class VerificationOrchestrator {
           id: jobId,
           candidateId,
           status: "ANALYZING" as any,
-          startedAt: new Date()
+          startedAt: new Date(),
+          createdAt: new Date()
         };
 
         const resume: ResumeData = {

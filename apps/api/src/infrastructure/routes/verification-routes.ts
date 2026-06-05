@@ -32,7 +32,7 @@ export function createVerificationRouter(
         return res.status(403).json({ error: "Access denied. Organization ID missing." });
       }
 
-      const result = await uploadCandidateUseCase.execute(orgId, req.body);
+      const result = await uploadCandidateUseCase.execute(req.body);
       return res.status(202).json(result);
     } catch (error) {
       next(error);

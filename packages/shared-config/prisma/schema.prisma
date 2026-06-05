@@ -10,269 +10,38 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// @purpose Represents a recruiter or administrator utilizing the VeriSphere system.
-/// @security Stores Clerk identifier for federated auth. No password hashes stored locally.
-/// @relations Belongs to an Organization. Logs actions in ActivityLog.
-model User {
-  id             String        @id @default(uuid())
-  clerkId        String        @unique
-  email          String        @unique
-  firstName      String?
-  lastName       String?
-  role           String        @default("USER") // USER, ADMIN, ORGANIZATION_ADMIN
-  organizationId String?
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-  activityLogs   ActivityLog[]
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-
-  @@index([email])
-  @@index([organizationId])
-}
-
-/// @purpose Defines corporate bounds for verification dashboards, reports sharing, and user scoping.
-/// @relations Contains multiple Users, Candidates, and APIKeys.
-model Organization {
-  id         String      @id @default(uuid())
-  name       String
-  slug       String      @unique
-  users      User[]
-  candidates Candidate[]
-  apiKeys    APIKey[]
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-}
-
-/// @purpose Represents a job applicant whose claims require verification.
-/// @security Contains PII. Restrict access to authorized Organization recruiters only.
-/// @relations Managed under an Organization. Has one Resume, many Certificates, one GitHubProfile, and many VerificationJobs.
 model Candidate {
-  id             String            @id @default(uuid())
-  organizationId String
-  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  firstName      String
-  lastName       String
-  email          String
-  githubUrl      String?
-  resume         Resume?
-  certificates   Certificate[]
-  githubProfile  GitHubProfile?
-  jobs           VerificationJob[]
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-
-  @@index([organizationId])
-  @@index([email])
-}
-
-/// @purpose Stores extracted structural details and textual claims from the candidate's resume PDF.
-/// @security Store the document URL securely (e.g. presigned S3/UploadThing urls).
-/// @relations Belongs to a Candidate.
-model Resume {
-  id           String    @id @default(uuid())
-  candidateId  String    @unique
-  candidate    Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  fileUrl      String
-  sha256Hash   String
-  rawText      String // @future Store parsed embeddings in a vector database instead
-  skills       String[] // Extracted technologies & skills
-  educationJson String // Serialized array of degree details
-  experienceJson String // Serialized array of professional roles
-  projectsJson String // Serialized array of personal/work projects
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-}
-
-/// @purpose Holds forensic details and integrity records for uploaded certificates to verify PDF metadata authenticity.
-/// @security Check SHA256 hashes against known certification registry databases.
-/// @relations Belongs to a Candidate.
-model Certificate {
-  id               String    @id @default(uuid())
-  candidateId      String
-  candidate        Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  fileUrl          String
-  fileName         String
-  sha256Hash       String
-  metadataProducer String?
-  metadataCreator  String?
-  pdfVersion       String?
-  creationDate     DateTime?
-  modificationDate DateTime?
-  isTampered       Boolean   @default(false)
-  tamperScore      Int       @default(0) // 0-100
-  tamperSignals    String[]
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-
-  @@index([candidateId])
-}
-
-/// @purpose Main metrics aggregate for the candidate's GitHub presence.
-/// @relations Belongs to a Candidate. Owns multiple Repository records.
-model GitHubProfile {
-  id             String       @id @default(uuid())
-  candidateId    String       @unique
-  candidate      Candidate    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  githubUsername String
-  followersCount Int          @default(0)
-  followingCount Int          @default(0)
-  reposCount     Int          @default(0)
-  accountAgeMonths Int        @default(0)
-  repositories   Repository[]
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-}
-
-/// @purpose Aggregates analytics, ownership flags, and anomaly detections for specific candidate repositories.
-/// @relations Child of GitHubProfile. Contains CommitActivity records.
-model Repository {
-  id                 String           @id @default(uuid())
-  profileId          String
-  profile            GitHubProfile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  name               String
-  fullName           String
-  isFork             Boolean          @default(false)
-  forkSourceUrl      String?
-  starsCount         Int              @default(0)
-  forksCount         Int              @default(0)
-  primaryLanguage    String
-  languagesJson      String // Record<string, number> representing byte weights
-  repoCreatedAt      DateTime
-  repoUpdatedAt      DateTime
-  repoPushedAt       DateTime
-  contributorsList   String[]
-  commitsCount       Int              @default(0)
-  isSuspicious       Boolean          @default(false)
-  ownershipScore     Int              @default(100) // 0-100 score of true candidate ownership
-  anomalies          String[]
-  commitActivities   CommitActivity[]
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
-
-  @@index([profileId])
-}
-
-/// @purpose Chronological or structural commit distribution metrics used to pinpoint spoofed/squashed histories.
-/// @relations Belongs to a Repository.
-model CommitActivity {
-  id                 String     @id @default(uuid())
-  repositoryId       String
-  repository         Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
-  totalCommits       Int        @default(0)
-  additions          Int        @default(0)
-  deletions          Int        @default(0)
-  weeklyTimelineJson String // Array of {weekTimestamp, commitCount}
-  hourlyDistribution Int[] // Size 24 representing commit time zones
-  authorEmails       String[]
-  createdAt          DateTime   @default(now())
-
-  @@index([repositoryId])
-}
-
-/// @purpose Tracks execution tasks for candidate analysis jobs within the queue.
-/// @relations Belongs to a Candidate. Spawns one AuditReport, many RiskIndicators, TrustScore, and InterviewQuestions.
-model VerificationJob {
-  id          String              @id @default(uuid())
-  candidateId String
-  candidate   Candidate           @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  status      String              @default("QUEUED") // QUEUED, DOWNLOADING, EXTRACTING, ANALYZING, COMPLETED, FAILED
-  startedAt   DateTime            @default(now())
-  completedAt DateTime?
-  errorMsg    String?
-  report      AuditReport?
-  trustScore  TrustScore?
-  questions   InterviewQuestion[]
-  indicators  RiskIndicator[]
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-
-  @@index([candidateId])
-  @@index([status])
-}
-
-/// @purpose Final summarized results generated by AI comparing CV claims versus forensic evidence.
-/// @relations Child of VerificationJob.
-model AuditReport {
-  id               String          @id @default(uuid())
-  jobId            String          @unique
-  job              VerificationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  findingsSummary  String
-  semanticMatchJson String // Detailed JSON breakdown of skills versus evidence
-  contradictions   String[]
-  createdAt        DateTime        @default(now())
-}
-
-/// @purpose Represents the quantified levels of authenticity calculated by the platform.
-/// @relations Child of VerificationJob.
-model TrustScore {
-  id                     String          @id @default(uuid())
-  jobId                  String          @unique
-  job                    VerificationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  overallScore           Int // 0-100
-  resumeConsistency      Int // 0-100
-  githubEvidence         Int // 0-100
-  certificateValidity    Int // 0-100
-  contributionConfidence Int // 0-100
-  activityConfidence     Int // 0-100
-  createdAt              DateTime        @default(now())
-}
-
-/// @purpose Contains custom behavioral or technical questions generated based on risks or skill gaps.
-/// @relations Belongs to a VerificationJob.
-model InterviewQuestion {
-  id                   String          @id @default(uuid())
-  jobId                String
-  job                  VerificationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  question             String
-  expectedAnswerOutline String
-  targetedSkillOrClaim String
-  severityReason       String
-  difficulty           String          @default("MEDIUM") // EASY, MEDIUM, HARD
-  createdAt            DateTime        @default(now())
-
-  @@index([jobId])
-}
-
-/// @purpose Flags concrete instances of tampering, plagiarism, or profile spoofing found during evaluations.
-/// @relations Belongs to a VerificationJob.
-model RiskIndicator {
-  id          String          @id @default(uuid())
-  jobId       String
-  job         VerificationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  category    String // METADATA_MISMATCH, CLONED_REPOSITORY, IDENTITY_MISMATCH, TIMELINE_ANOMALY, SUSPICIOUS_PROVIDER
-  severity    String // LOW, MEDIUM, HIGH, CRITICAL
-  description String
-  evidence    String
-  createdAt   DateTime        @default(now())
-
-  @@index([jobId])
-}
-
-/// @purpose Audit trail of activities performed by recruiters/admins on the system.
-/// @relations Logged by a User.
-model ActivityLog {
   id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  action    String
-  details   String?
-  ipAddress String?
+  firstName String
+  lastName  String
+  email     String
+  githubUrl String?
+  jobs      VerificationJob[]
   createdAt DateTime @default(now())
-
-  @@index([userId])
 }
 
-/// @purpose Enables API access for third-party platforms (like ATS/HR portals) to trigger verifications.
-/// @security Store SHA256 hashed api key in database, never plain text. Only reveal raw key once during creation.
-model APIKey {
-  id             String       @id @default(uuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  hashedKey      String       @unique
-  name           String
-  isActive       Boolean      @default(true)
-  expiresAt      DateTime?
-  createdAt      DateTime     @default(now())
+model VerificationJob {
+  id                String       @id @default(uuid())
+  candidateId       String
+  candidate         Candidate    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  status            String       @default("QUEUED")
+  startedAt         DateTime     @default(now())
+  completedAt       DateTime?
+  errorMsg          String?
+  githubMetricsJson String?      // Stores raw GitHub engine output
+  resumeDataJson    String?      // Stores raw Forensics engine output
+  report            AuditReport?
+  createdAt         DateTime     @default(now())
+}
 
-  @@index([organizationId])
+model AuditReport {
+  id                String          @id @default(uuid())
+  jobId             String          @unique
+  job               VerificationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  trustScore        Int             // 0-100 overall score
+  findingsSummary   String
+  semanticMatchJson String          // Stores the detailed matches
+  contradictions    String[]
+  riskIndicatorsJson String         // Stores risks as JSON instead of a separate table
+  createdAt         DateTime        @default(now())
 }

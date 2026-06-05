@@ -31,7 +31,6 @@ export class UploadCandidateUseCase {
    * Validates intake requests, saves candidate records to PostgreSQL, and kicks off verification job worker.
    */
   public async execute(
-    organizationId: string,
     request: CreateCandidateRequest
   ): Promise<CreateCandidateResponse> {
     // 1. Validation checks
@@ -49,7 +48,6 @@ export class UploadCandidateUseCase {
 
     // 2. Save candidate
     const candidate = await this.candidateRepo.create({
-      organizationId,
       firstName: request.firstName,
       lastName: request.lastName,
       email: request.email,

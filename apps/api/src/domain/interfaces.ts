@@ -7,7 +7,7 @@
  * @future_implementation Implement mock repositories conforming to these schemas to allow instant unit testing of business logic.
  */
 
-import { Candidate, VerificationJob, AuditReport, InterviewQuestion, TrustScoreBreakdown } from "@verisphere/shared-types";
+import { Candidate, VerificationJob, AuditReport, TrustScoreBreakdown } from "@verisphere/shared-types";
 
 export interface ICandidateRepository {
   findById(id: string): Promise<Candidate | null>;
@@ -22,9 +22,8 @@ export interface IVerificationJobRepository {
   updateStatus(jobId: string, status: string, errorMsg?: string): Promise<void>;
   saveResults(
     jobId: string, 
-    report: Omit<AuditReport, "id" | "jobId" | "generatedAt">,
-    trustScore: TrustScoreBreakdown,
-    questions: Omit<InterviewQuestion, "id" | "jobId" | "createdAt">[]
+    report: AuditReport, 
+    trustScore: TrustScoreBreakdown
   ): Promise<void>;
 }
 

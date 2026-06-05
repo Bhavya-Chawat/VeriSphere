@@ -29,16 +29,8 @@ const mockCandidateRepo = {
   findById: async (id: string) => null,
   findByEmail: async (email: string) => null,
   create: async (c: any) => {
-    // Check if organization exists, if not create a default one
-    let org = await prisma.organization.findFirst();
-    if (!org) {
-      org = await prisma.organization.create({
-        data: { name: "Mock Org", slug: "mock-org" }
-      });
-    }
     const candidate = await prisma.candidate.create({
       data: {
-        organizationId: org.id,
         firstName: c.firstName || "John",
         lastName: c.lastName || "Doe",
         email: c.email || "test@example.com",
