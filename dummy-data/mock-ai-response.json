@@ -1,0 +1,27 @@
+{
+  "findingsSummary": "The candidate has a solid background in frontend development with strong React and TypeScript skills, matching their claims. GitHub activity shows consistent contributions.",
+  "semanticMatches": [
+    {
+      "claimedSkill": "React",
+      "matchedRepo": "ecommerce-frontend",
+      "evidenceLevel": "STRONG",
+      "notes": "Found multiple commits involving React hooks and components."
+    },
+    {
+      "claimedSkill": "PostgreSQL",
+      "matchedRepo": "ecommerce-backend",
+      "evidenceLevel": "MODERATE",
+      "notes": "Found database schema definitions but limited complex queries."
+    }
+  ],
+  "contradictions": [],
+  "riskIndicators": [],
+  "trustScore": {
+    "overallScore": 85,
+    "resumeConsistency": 90,
+    "githubEvidence": 80,
+    "certificateValidity": 100,
+    "contributionConfidence": 85,
+    "activityConfidence": 80
+  }
+}
