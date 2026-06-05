@@ -1,0 +1,18 @@
+{
+  "name": "@verisphere/ai-layer",
+  "version": "1.0.0",
+  "main": "dist/providers/gemini.js",
+  "types": "dist/providers/gemini.d.ts",
+  "private": true,
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@verisphere/shared-types": "workspace:^1.0.0",
+    "@google/generative-ai": "^0.2.1",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,0 +1,35 @@
+# Build Stage
+FROM node:18-alpine AS builder
+WORKDIR /app
+
+RUN npm install -g pnpm
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
+COPY packages/shared-types/package.json ./packages/shared-types/
+COPY apps/web/package.json ./apps/web/
+
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+COPY packages/shared-types/ ./packages/shared-types/
+COPY apps/web/ ./apps/web/
+COPY tsconfig.json ./
+
+RUN pnpm --filter @verisphere/shared-types build
+RUN pnpm --filter web build
+
+# Runtime Stage
+FROM node:18-alpine AS runner
+WORKDIR /app
+RUN npm install -g pnpm
+
+COPY package.json pnpm-workspace.yaml ./
+COPY --from=builder /app/packages/ ./packages/
+COPY --from=builder /app/apps/web/package.json ./apps/web/package.json
+COPY --from=builder /app/apps/web/.next ./apps/web/.next
+COPY --from=builder /app/apps/web/public ./apps/web/public
+
+RUN pnpm install --prod --ignore-scripts
+
+EXPOSE 3000
+ENV NODE_ENV=production
+CMD ["pnpm", "--filter", "web", "start"]
