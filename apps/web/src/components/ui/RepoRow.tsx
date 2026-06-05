@@ -6,7 +6,7 @@ import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts';
 import { motion, AnimatePresence } from "framer-motion";
 import { expandCollapse } from "@/lib/motion-variants";
 
-export function RepoRow({ repoName, language, commits, date, skills, sparklineData }: any) {
+export function RepoRow({ repoName, language, commits, date, skills, sparklineData, recentCommits }: any) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -79,12 +79,15 @@ export function RepoRow({ repoName, language, commits, date, skills, sparklineDa
               <div>
                 <h5 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">Recent Evidence</h5>
                 <div className="flex flex-col gap-2">
-                  <div className="text-xs text-[var(--text-primary)] truncate font-mono bg-[var(--bg-surface)] p-1.5 rounded border border-[var(--border)] shadow-sm">
-                    feat: implement react-query caching for dashboard
-                  </div>
-                  <div className="text-xs text-[var(--text-primary)] truncate font-mono bg-[var(--bg-surface)] p-1.5 rounded border border-[var(--border)] shadow-sm">
-                    fix: resolve hydration error in strict mode
-                  </div>
+                  {recentCommits && recentCommits.length > 0 ? (
+                    recentCommits.map((msg: string, i: number) => (
+                      <div key={i} className="text-xs text-[var(--text-primary)] truncate font-mono bg-[var(--bg-surface)] p-1.5 rounded border border-[var(--border)] shadow-sm" title={msg}>
+                        {msg}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-xs text-[var(--text-secondary)] italic">No recent commit messages available.</div>
+                  )}
                 </div>
               </div>
             </div>

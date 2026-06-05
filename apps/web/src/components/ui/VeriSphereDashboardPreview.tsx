@@ -217,6 +217,42 @@ export function VeriSphereDashboardPreview() {
   const [analysisText, setAnalysisText] = useState("");
   const [dotCount, setDotCount] = useState(0);
 
+  const [liveData, setLiveData] = useState<{name: string, initials: string, score: number, skills: string[], commits: number} | null>(null);
+
+  useEffect(() => {
+    fetch('/api/verification/dashboard')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.length > 0) {
+          const job = data[0];
+          const name = `${job.candidate.firstName} ${job.candidate.lastName}`;
+          let skills = ["React", "TypeScript", "Node.js"];
+          try {
+             if (job.report?.semanticMatchJson) {
+                const parsed = JSON.parse(job.report.semanticMatchJson);
+                skills = parsed.map((m: any) => m.skill).slice(0, 5);
+             }
+          } catch(e) {}
+          let commits = 2847;
+          try {
+             if (job.githubMetricsJson) {
+                const parsed = JSON.parse(job.githubMetricsJson);
+                commits = parsed.totalCommitsCollected || 0;
+             }
+          } catch(e) {}
+
+          setLiveData({
+            name,
+            initials: `${job.candidate.firstName[0]}${job.candidate.lastName[0]}`.toUpperCase(),
+            score: job.report?.trustScore || 87,
+            skills: skills.length > 0 ? skills : ["React", "TypeScript", "Node.js"],
+            commits
+          });
+        }
+      })
+      .catch(err => console.error("Failed to fetch dashboard data:", err));
+  }, []);
+
   // Build phases
   const [showProfile, setShowProfile]   = useState(false);
   const [showGauge, setShowGauge]       = useState(false);
@@ -500,7 +536,9 @@ export function VeriSphereDashboardPreview() {
                       </div>
                       <div>
                         <div className="text-xs font-bold text-[var(--text-primary)]">Commit Audit</div>
-                        <div className="text-[10px] text-[var(--text-secondary)]">2,847 commits mapped</div>
+                        <div className="text-[10px] text-[var(--text-secondary)]">
+                          {liveData?.commits ? liveData.commits.toLocaleString() : "2,847"} commits mapped
+                        </div>
                       </div>
                     </motion.div>
                   </>
@@ -540,11 +578,11 @@ export function VeriSphereDashboardPreview() {
                     <div className="flex items-start justify-between mb-8">
                       <div className="flex items-center gap-4">
                         <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white text-xl shadow-inner shadow-white/10 relative overflow-hidden">
-                          AR
+                          {liveData?.initials || "AR"}
                           <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent pointer-events-none" />
                         </div>
                         <div>
-                          <h3 className="font-heading font-bold text-lg text-[var(--text-primary)]">Alex Rivers</h3>
+                          <h3 className="font-heading font-bold text-lg text-[var(--text-primary)]">{liveData?.name || "Candidate Overview"}</h3>
                           <p className="text-xs text-[var(--text-secondary)] font-medium">Senior Full Stack Developer</p>
                         </div>
                       </div>
@@ -560,7 +598,7 @@ export function VeriSphereDashboardPreview() {
 
                     {/* Trust Gauge */}
                     <div className="my-4 flex justify-center">
-                      <InlineTrustGauge score={87} trigger={showGauge} />
+                      <InlineTrustGauge score={liveData?.score || 87} trigger={showGauge} />
                     </div>
 
                     {/* Skills */}
@@ -569,7 +607,7 @@ export function VeriSphereDashboardPreview() {
                         Verified Skills Matrix
                       </span>
                       <div className="flex flex-wrap gap-2">
-                        {skills.map((s, i) => (
+                        {(liveData?.skills || ["React", "TypeScript", "Node.js"]).map((s, i) => (
                           <motion.div
                             key={s}
                             initial={{ opacity: 0, scale: 0.85, x: -6 }}

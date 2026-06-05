@@ -4,7 +4,7 @@ import { Check, AlertTriangle, ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
 import { staggerItem } from "@/lib/motion-variants";
 
-export function EvidenceRow({ claim, source, status }: { claim: string, source: string, status: 'VERIFIED' | 'UNVERIFIED' }) {
+export function EvidenceRow({ claim, source, status, href }: { claim: string, source: string, status: 'VERIFIED' | 'UNVERIFIED', href?: string }) {
   const isVerified = status === 'VERIFIED';
   
   return (
@@ -21,13 +21,17 @@ export function EvidenceRow({ claim, source, status }: { claim: string, source: 
         <div className="text-[var(--text-tertiary)] mx-2">→</div>
         <div className="flex-1 flex items-center gap-2">
           <span className="text-sm text-[var(--text-secondary)]">{source}</span>
-          <motion.a
-            href="#"
-            whileHover={{ color: "var(--brand-blue)", scale: 1.1 }}
-            className="text-[var(--text-tertiary)] transition-colors"
-          >
-            <ExternalLink size={14} />
-          </motion.a>
+          {href && (
+            <motion.a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ color: "var(--brand-blue)", scale: 1.1 }}
+              className="text-[var(--text-tertiary)] transition-colors"
+            >
+              <ExternalLink size={14} />
+            </motion.a>
+          )}
         </div>
       </div>
       <div className="ml-4">

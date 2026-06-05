@@ -133,3 +133,28 @@ body {
     background: var(--bg-muted);
   }
 }
+
+/* Print Styles for PDF Export */
+@media print {
+  body {
+    background-color: white !important;
+    color: black !important;
+  }
+  .print\:hidden,
+  nav,
+  footer {
+    display: none !important;
+  }
+  @page {
+    margin: 1cm;
+    size: A4;
+  }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    box-shadow: none !important;
+  }
+  .break-inside-avoid {
+    break-inside: avoid;
+  }
+}

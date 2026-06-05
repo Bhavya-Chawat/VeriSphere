@@ -72,8 +72,22 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
   let githubMetrics = { publicReposCount: 0, totalCommitsCollected: 0, analyzedRepos: [] as any[] };
   try { if (githubMetricsJson) githubMetrics = JSON.parse(githubMetricsJson); } catch (e) {}
   
-  let semanticMatches = [];
-  try { if (report.semanticMatchJson) semanticMatches = JSON.parse(report.semanticMatchJson); } catch(e) {}
+  let semanticMatches: any[] = [];
+  try { 
+    if (report.semanticMatchJson) {
+      const parsedMatches = JSON.parse(report.semanticMatchJson);
+      const uniqueMatches = new Map();
+      parsedMatches.forEach((m: any) => {
+        const skill = m.claimedSkill || m.skill || "Unknown";
+        if (skill === "Unknown") return; // Cut off unknown evidence
+        
+        if (!uniqueMatches.has(skill) || uniqueMatches.get(skill).confidenceScore < m.confidenceScore) {
+          uniqueMatches.set(skill, { ...m, claimedSkill: skill });
+        }
+      });
+      semanticMatches = Array.from(uniqueMatches.values());
+    }
+  } catch(e) {}
 
   let riskIndicators = [];
   try { if (report.riskIndicatorsJson) riskIndicators = JSON.parse(report.riskIndicatorsJson); } catch(e) {}
@@ -90,6 +104,27 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
     name: lang,
     value: Math.round((languageCounts[lang] / (githubMetrics.totalCommitsCollected || 1)) * 100)
   })).sort((a,b) => b.value - a.value).slice(0,4);
+
+  const handleDownloadPDF = async () => {
+    try {
+      const res = await fetch(`http://localhost:4000/api/verification/jobs/${resolvedParams.id}/report/pdf`, {
+        headers: { "x-api-key": apiKey || "" }
+      });
+      if (!res.ok) throw new Error("Failed to generate PDF");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `VeriSphere_Report_${candidate.firstName}_${candidate.lastName}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Error downloading PDF:", error);
+      alert("Failed to generate PDF report.");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[var(--bg-page)] pb-24">
@@ -114,7 +149,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <motion.button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--brand-blue)] text-white hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm">
+            <motion.button onClick={handleDownloadPDF} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--brand-blue)] text-white hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm print:hidden">
               <Download size={14} /> Download Report
             </motion.button>
           </div>
@@ -193,9 +228,20 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
                   <motion.div variants={fadeInUp} className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] shadow-[var(--shadow-sm)] p-6 mb-8">
                     <h3 className="text-lg font-bold text-[var(--text-primary)] mb-4">Evidence Trail</h3>
                     <motion.div variants={staggerContainer} className="flex flex-col">
-                      {semanticMatches.map((match: any, i: number) => (
-                        <EvidenceRow key={i} claim={`${match.skill} claimed`} source={`Confidence: ${Math.round(match.confidenceScore * 100)}%`} status={match.confidenceScore > 0.7 ? "VERIFIED" : "UNVERIFIED"} />
-                      ))}
+                      {semanticMatches.map((match: any, i: number) => {
+                        const href = candidate.githubUrl && match.matchedRepo && match.matchedRepo !== "None" 
+                          ? `${candidate.githubUrl}/${match.matchedRepo}`
+                          : undefined;
+                        return (
+                          <EvidenceRow 
+                            key={i} 
+                            claim={`${match.claimedSkill} claimed`} 
+                            source={`Confidence: ${Math.round(match.confidenceScore * 100)}%`} 
+                            status={match.confidenceScore > 0.7 ? "VERIFIED" : "UNVERIFIED"} 
+                            href={href}
+                          />
+                        );
+                      })}
                     </motion.div>
                   </motion.div>
                 </div>
@@ -205,7 +251,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
                     <h3 className="text-sm font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">Skills ({semanticMatches.length})</h3>
                     <div className="flex flex-wrap gap-2">
                       {semanticMatches.map((m: any, i: number) => (
-                        <SkillPill key={i} name={m.skill} status={m.confidenceScore > 0.7 ? "verified" : "unverified"} />
+                        <SkillPill key={i} name={m.claimedSkill} status={m.confidenceScore > 0.7 ? "verified" : "unverified"} />
                       ))}
                     </div>
                   </motion.div>
@@ -247,8 +293,8 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
                       <div className="col-span-2">Last Active</div>
                       <div className="col-span-3">Skill Match</div>
                     </div>
-                    {githubMetrics.analyzedRepos?.slice(0, 5).map((repo: any, i: number) => (
-                       <RepoRow key={i} repoName={repo.name} language={repo.language || "Unknown"} commits={repo.commits} date="Recently" skills={[]} sparklineData={[]} />
+                    {githubMetrics.analyzedRepos?.map((repo: any, i: number) => (
+                       <RepoRow key={i} repoName={repo.name} language={repo.language || "Unknown"} commits={repo.commits} date="Recently" skills={[]} sparklineData={[]} recentCommits={repo.recentCommits} />
                     ))}
                   </div>
                   <div className="col-span-4 bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] shadow-[var(--shadow-sm)] p-6">

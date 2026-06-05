@@ -25,7 +25,7 @@ export async function fetchRepositories(
   octokit: Octokit
 ): Promise<RepositoryEvidence[]> {
   try {
-    const response = await octokit.rest.repos.listForUser({
+    const repos = await octokit.paginate(octokit.rest.repos.listForUser, {
       username,
       type: "owner",
       sort: "pushed",
@@ -33,7 +33,7 @@ export async function fetchRepositories(
       per_page: 100,
     });
 
-    return response.data
+    return repos
       .filter((repo) => !repo.archived)
       .map((repo) => ({
         name: repo.name,

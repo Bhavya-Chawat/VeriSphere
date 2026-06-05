@@ -56,6 +56,34 @@ export function createVerificationRouter(
   });
 
   /**
+   * GET /api/verification/jobs/:jobId/report/pdf
+   * Generates and returns a professionally formatted PDF verification report.
+   */
+  router.get("/jobs/:jobId/report/pdf", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { jobId } = req.params;
+      const job = await jobRepository.findById(jobId);
+      
+      if (!job || !job.report) {
+        throw new ResourceNotFoundError("AuditReport", jobId);
+      }
+
+      // We dynamically import or instantiate the service
+      // Better to require it here to avoid circular deps if any, or just import it at the top
+      const { PdfGeneratorService } = require("../../application/services/pdf-generator");
+      const pdfService = new PdfGeneratorService();
+      
+      const pdfBuffer = await pdfService.generateReport(job);
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="VeriSphere_Report_${jobId}.pdf"`);
+      return res.send(pdfBuffer);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
    * GET /api/verification/dashboard
    * Returns all recent verification jobs with their candidates and reports for the dashboard.
    */

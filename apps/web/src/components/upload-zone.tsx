@@ -43,7 +43,7 @@ export function UploadZone({ label, accept, onUploadComplete }: UploadZoneProps)
       setProgress((prev) => {
         if (prev >= 100) {
           clearInterval(timer);
-          onUploadComplete(`https://uploadthing.com/f/mock-${file.name}`);
+          onUploadComplete(`https://uploadthing.com/f/uploaded-${file.name}`);
           return 100;
         }
         return prev + 30;

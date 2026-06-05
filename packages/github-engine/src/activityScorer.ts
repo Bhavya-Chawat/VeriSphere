@@ -34,6 +34,7 @@ export async function fetchCommitActivity(
     avgCommitsPerMonth: 0,
     lastActiveDate: new Date(0).toISOString(),
     commitDates: [],
+    recentCommits: [],
   };
 
   try {
@@ -89,6 +90,10 @@ export async function fetchCommitActivity(
       avgCommitsPerMonth,
       lastActiveDate: lastDate.toISOString(),
       commitDates,
+      recentCommits: commits
+        .slice(0, 5)
+        .map((c: any) => c.commit?.message?.split('\n')[0] || "")
+        .filter((msg: string) => msg.trim() !== ""),
     };
   } catch (error) {
     console.warn(

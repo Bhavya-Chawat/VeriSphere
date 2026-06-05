@@ -94,6 +94,7 @@ export const MOCK_GITHUB_EVIDENCE_REPORT: GithubEvidenceReport = {
       totalCommits: 187,
       primaryLanguage: "TypeScript",
       flags: [],
+      recentCommits: ["feat: add user authentication", "fix: resolve cart calculation bug"],
     },
     {
       repoName: "ml-pipeline-toolkit",
@@ -102,6 +103,7 @@ export const MOCK_GITHUB_EVIDENCE_REPORT: GithubEvidenceReport = {
       totalCommits: 63,
       primaryLanguage: "Python",
       flags: [],
+      recentCommits: ["feat: update pandas dependency"],
     },
     {
       repoName: "realtime-chat-api",
@@ -110,6 +112,7 @@ export const MOCK_GITHUB_EVIDENCE_REPORT: GithubEvidenceReport = {
       totalCommits: 54,
       primaryLanguage: "TypeScript",
       flags: [],
+      recentCommits: ["fix: socket disconnect issue"],
     },
     {
       repoName: "devops-playbook",
@@ -118,6 +121,7 @@ export const MOCK_GITHUB_EVIDENCE_REPORT: GithubEvidenceReport = {
       totalCommits: 29,
       primaryLanguage: "HCL",
       flags: [],
+      recentCommits: ["chore: update terraform providers"],
     },
   ],
 };

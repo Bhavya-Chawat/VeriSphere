@@ -121,6 +121,14 @@ export class VerificationOrchestrator {
           data: { status: "ANALYZING" }
         });
 
+        const candidateRecord = await this.prisma.candidate.findUnique({
+          where: { id: candidateId }
+        });
+        
+        if (!candidateRecord) {
+          throw new Error(`Candidate ${candidateId} not found`);
+        }
+
         const job: VerificationJob = {
           id: jobId,
           candidateId,
@@ -129,41 +137,66 @@ export class VerificationOrchestrator {
           createdAt: new Date()
         };
 
-        // In a real app, extract from the uploaded resume file.
-        // For the demo, use mock resume text that matches the mock AI response profile.
+        // Dynamically create placeholder resume data based on actual candidate name
         const resume: ResumeData = {
           id: `res_${Date.now()}`,
           candidateId,
           fileUrl: "",
-          rawText: "Arjun Sharma - Senior Software Engineer. 5 years of experience with Node.js, React, TypeScript, PostgreSQL, Docker, and AWS. Built fintrack-api and fintrack-frontend. Holds AWS Solutions Architect certification.",
-          skills: ["Node.js", "React", "TypeScript", "PostgreSQL", "Docker", "AWS"],
-          education: [{ degree: "B.Tech Computer Science", institution: "IIT Bombay", year: 2018 }],
-          experience: [
-            { title: "Senior Engineer", company: "Razorpay", years: 2 },
-            { title: "Software Engineer", company: "Flipkart", years: 2 }
-          ],
-          projects: [{ name: "fintrack-api" }, { name: "fintrack-frontend" }]
+          rawText: `${candidateRecord.firstName} ${candidateRecord.lastName} - Candidate Profile. Resume parsing not yet implemented.`,
+          skills: [],
+          education: [],
+          experience: [],
+          projects: []
         };
 
-        const githubMetrics: GithubProfileMetrics = {
+        let githubMetrics: GithubProfileMetrics = {
           id: `git_${Date.now()}`,
           candidateId,
-          githubUsername: "arjun-sharma-dev",
-          publicReposCount: 12,
-          followersCount: 89,
-          followingCount: 45,
-          accountAgeMonths: 36,
-          totalCommitsCollected: 847,
-          analyzedRepos: [
-            { name: "fintrack-api", language: "TypeScript", commits: 340, stars: 23 },
-            { name: "fintrack-frontend", language: "React", commits: 210, stars: 18 },
-            { name: "devops-playground", language: "Shell", commits: 45, stars: 3 },
-            { name: "algo-practice", language: "Python", commits: 180, stars: 7 },
-            { name: "portfolio-site", language: "JavaScript", commits: 72, stars: 5 }
-          ],
+          githubUsername: "unknown",
+          publicReposCount: 0,
+          followersCount: 0,
+          followingCount: 0,
+          accountAgeMonths: 0,
+          totalCommitsCollected: 0,
+          analyzedRepos: [],
           timelineAnomalyAlerts: [],
           hasTimelineGaps: false
         };
+
+        if (candidateRecord.githubUrl) {
+          try {
+            console.log(`[Orchestrator] Fetching live GitHub evidence for ${candidateRecord.githubUrl}`);
+            const { scrapeGithubEvidence } = await import('@verisphere/github-engine');
+            const githubEvidenceReport = await scrapeGithubEvidence(candidateRecord.githubUrl);
+            
+            githubMetrics = {
+              id: `git_${Date.now()}`,
+              candidateId,
+              githubUsername: githubEvidenceReport.username,
+              publicReposCount: githubEvidenceReport.repositories.length,
+              followersCount: 0, // Mocked for now since not returned by engine
+              followingCount: 0, // Mocked for now
+              accountAgeMonths: 12, // Mocked for now
+              totalCommitsCollected: githubEvidenceReport.repoEvidence.reduce((acc, r) => acc + r.totalCommits, 0),
+              analyzedRepos: githubEvidenceReport.repoEvidence.map(r => ({
+                name: r.repoName,
+                language: r.primaryLanguage,
+                commits: r.totalCommits,
+                stars: 0, // Mocked for now
+                recentCommits: r.recentCommits
+              })),
+              timelineAnomalyAlerts: githubEvidenceReport.timelineFlags.map(f => f.type),
+              hasTimelineGaps: githubEvidenceReport.timelineFlags.length > 0
+            };
+            
+            // Add fetched skills to the dynamic resume so the AI can match them
+            resume.skills = githubEvidenceReport.verifiedSkills;
+            resume.rawText += ` Detected skills from GitHub: ${githubEvidenceReport.verifiedSkills.join(', ')}.`;
+          } catch (githubErr) {
+            console.error(`[Orchestrator] GitHub Scraping failed:`, githubErr);
+            // We proceed with empty githubMetrics if scraping fails
+          }
+        }
 
         await this.executeVerification(job, resume, githubMetrics);
       } catch (error: any) {

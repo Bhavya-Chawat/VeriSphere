@@ -38,6 +38,7 @@ export interface RawCommit {
     committer: {
       date: string | null | undefined;
     } | null;
+    message: string;
   };
 }
 
@@ -66,6 +67,7 @@ export interface RepoEvidence {
   totalCommits: number;
   primaryLanguage: string;
   flags: string[];
+  recentCommits: string[];
 }
 
 /** A timeline anomaly flag detected in a repository's commit history. */
@@ -93,6 +95,8 @@ export interface ActivityMetrics {
   lastActiveDate: string;
   /** Parsed commit author dates, used for timeline analysis. */
   commitDates: Date[];
+  /** Up to 5 recent commit messages for this repository. */
+  recentCommits: string[];
 }
 
 // ---------------------------------------------------------------------------

@@ -12,7 +12,7 @@ const stageDetails: Record<string, string> = {
   "Generating trust report": "Synthesizing evidence into final trust score...",
 };
 
-export function ProcessingStage({ label, delay, isActive, onComplete }: { label: string, delay: number, isActive: boolean, onComplete: () => void }) {
+export function ProcessingStage({ label, delay, isActive, onComplete }: { label: string, delay: number, isActive: boolean, onComplete?: () => void }) {
   const [status, setStatus] = useState<'pending' | 'active' | 'complete'>('pending');
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export function ProcessingStage({ label, delay, isActive, onComplete }: { label:
       setStatus('active');
       const activeTimer = setTimeout(() => {
         setStatus('complete');
-        onComplete();
+        onComplete?.();
       }, 1500);
       return () => clearTimeout(activeTimer);
     }, delay);

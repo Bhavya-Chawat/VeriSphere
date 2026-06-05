@@ -6,7 +6,7 @@ import * as dotenv from "dotenv";
 import path from "path";
 
 // Load environment variables
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
 import { createVerificationRouter } from "./infrastructure/routes/verification-routes";
 import { createForensicsRouter } from "./modules/forensics/forensics.routes";

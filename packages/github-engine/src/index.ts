@@ -209,6 +209,7 @@ export async function scrapeGithubEvidence(
       totalCommits: activityMetrics.totalCommits,
       primaryLanguage: repo.language ?? "Unknown",
       flags: flags.map((f) => f.type),
+      recentCommits: activityMetrics.recentCommits,
     });
   }
 

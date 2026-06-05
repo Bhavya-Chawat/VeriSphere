@@ -266,10 +266,10 @@ export default function VerifyPage() {
               </div>
 
               <div className="flex flex-col gap-1 mb-12">
-                <ProcessingStage label="Parsing resume claims" delay={0} isActive={isProcessing} onComplete={() => {}} />
-                <ProcessingStage label="Fetching GitHub repositories" delay={1200} isActive={isProcessing} onComplete={() => {}} />
-                <ProcessingStage label="Cross-referencing skill evidence" delay={2400} isActive={isProcessing} onComplete={() => {}} />
-                <ProcessingStage label="Generating trust report" delay={3600} isActive={isProcessing} onComplete={() => {}} />
+                <ProcessingStage label="Parsing resume claims" delay={0} isActive={isProcessing} />
+                <ProcessingStage label="Fetching GitHub repositories" delay={1200} isActive={isProcessing} />
+                <ProcessingStage label="Cross-referencing skill evidence" delay={2400} isActive={isProcessing} />
+                <ProcessingStage label="Generating trust report" delay={3600} isActive={isProcessing} />
               </div>
 
               {/* Progress Bar */}
