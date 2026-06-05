@@ -14,6 +14,7 @@ import morgan from "morgan";
 import * as dotenv from "dotenv";
 
 import { createVerificationRouter } from "./infrastructure/routes/verification-routes";
+import { createForensicsRouter } from "./modules/forensics/forensics.routes";
 import { UploadCandidateUseCase } from "./application/use-cases/upload-candidate";
 import { VerificationOrchestrator } from "./application/verification-orchestrator";
 import { GeminiProvider } from "@verisphere/ai-layer/src/providers/gemini";
@@ -80,6 +81,7 @@ app.get("/health", (req, res) => {
 
 // Route mount
 app.use("/api/verification", createVerificationRouter(uploadUseCase, mockJobRepo));
+app.use("/api/forensics", createForensicsRouter());
 
 // Start server
 app.listen(PORT, () => {
