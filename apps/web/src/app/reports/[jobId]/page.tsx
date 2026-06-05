@@ -13,7 +13,8 @@ import { RiskIndicatorWidget } from "@/components/risk-indicator";
 import { RepositoryAnalysisWidget, CertificateAnalysisWidget, AuditTimeline, InterviewQuestionCard, VerificationStatusBanner } from "@/components/widgets";
 import { FileText, Github, HelpCircle, ShieldAlert } from "lucide-react";
 
-export default function ReportPage({ params }: { params: { jobId: string } }) {
+export default async function ReportPage({ params }: { params: Promise<{ jobId: string }> }) {
+  const { jobId } = await params;
   // Mock verification result payload
   const mockReport = {
     candidate: {
@@ -51,7 +52,7 @@ export default function ReportPage({ params }: { params: { jobId: string } }) {
       {/* Header Info */}
       <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-900 pb-6 gap-4">
         <div>
-          <span className="text-xs font-semibold text-emerald-400 uppercase tracking-widest">Audit ID: {params.jobId}</span>
+          <span className="text-xs font-semibold text-emerald-400 uppercase tracking-widest">Audit ID: {jobId}</span>
           <h1 className="text-3xl font-bold text-white">
             {mockReport.candidate.firstName} {mockReport.candidate.lastName}
           </h1>

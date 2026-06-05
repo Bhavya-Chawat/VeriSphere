@@ -1,0 +1,29 @@
+{
+  "metadata": {
+    "title": "AWS Certified Solutions Architect - Associate",
+    "author": "Jane Doe",
+    "producer": "Canva",
+    "creator": "Canva",
+    "creationDate": "2024-01-10T12:00:00.000Z",
+    "modificationDate": "2024-04-15T15:30:00.000Z",
+    "pageCount": 1,
+    "pdfVersion": "1.4",
+    "sha256Hash": "b89e37c4d51a23871ad3945de39e99fb627d0b3f81e39a3f28383f9ee47bde33",
+    "fileSize": 104523
+  },
+  "findings": [
+    {
+      "category": "SUSPICIOUS_PROVIDER",
+      "severity": "MEDIUM",
+      "description": "Document was generated or edited using software frequently associated with certificate template alteration.",
+      "evidence": "Found suspicious software reference: \"canva\" in metadata (Creator: \"Canva\", Producer: \"Canva\")"
+    },
+    {
+      "category": "METADATA_MISMATCH",
+      "severity": "HIGH",
+      "description": "The document's modification date is significantly later than its creation date, indicating potential post-issuance tampering.",
+      "evidence": "Modification date (2024-04-15T15:30:00.000Z) is 96 days after creation date (2024-01-10T12:00:00.000Z)"
+    }
+  ],
+  "trustScore": 60
+}

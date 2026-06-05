@@ -1,0 +1,23 @@
+John Doe
+Software Engineer
+Email: john.doe@example.com
+GitHub: https://github.com/johndoe123
+
+SKILLS
+TypeScript, React, Node.js, PostgreSQL, Docker, AWS
+
+EXPERIENCE
+Frontend Developer at TechCorp
+Jan 2021 - Present
+- Built the main dashboard using React and TypeScript.
+- Improved rendering performance by 30%.
+- Integrated REST APIs with Node.js backend.
+
+PROJECTS
+E-Commerce Platform
+- Built a full-stack e-commerce app using Next.js and PostgreSQL.
+- Deployed on AWS using Docker containers.
+
+EDUCATION
+B.S. Computer Science
+University of Technology, 2016-2020

@@ -7,7 +7,7 @@
  * @future_implementation Implement Exponential Backoff retry handler and token-based rate limiters to handle heavy concurrent analysis jobs.
  */
 
-import { GoogleGenAI } from "@google/generative-ai"; // Mocking import from official SDK
+import { GoogleGenerativeAI } from "@google/generative-ai"; // Mocking import from official SDK
 import { ZodSchema } from "zod";
 
 export interface GeminiConfig {
@@ -17,7 +17,7 @@ export interface GeminiConfig {
 }
 
 export class GeminiProvider {
-  private client: any; // Type as GoogleGenAI client
+  private client: any; // Type as GoogleGenerativeAI client
   private config: GeminiConfig;
 
   constructor(config: GeminiConfig) {

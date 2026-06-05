@@ -1,0 +1,19 @@
+{
+  "metadata": {
+    "creationDate": "2024-02-18T10:00:00.000Z",
+    "modificationDate": "2024-02-18T10:00:00.000Z",
+    "pageCount": 1,
+    "pdfVersion": "1.5",
+    "sha256Hash": "c48d29fb9e112d8a437a3de89fa38c821379da391bde49eef39ab48f293bde11",
+    "fileSize": 94812
+  },
+  "findings": [
+    {
+      "category": "METADATA_MISMATCH",
+      "severity": "LOW",
+      "description": "The document is missing standard PDF metadata fields, which is common in sanitized or stripped files.",
+      "evidence": "Missing metadata field(s): Creator, Producer"
+    }
+  ],
+  "trustScore": 95
+}

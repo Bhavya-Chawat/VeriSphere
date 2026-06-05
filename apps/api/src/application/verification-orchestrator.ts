@@ -1,119 +1,182 @@
-/**
- * @file verification-orchestrator.ts
- * @package apps/api
- * @purpose Orchestrates the asynchronous pipeline: Intake -> PDF Forensics -> Github Engine -> Gemini Audit -> Scoring -> DB.
- * @dependencies @verisphere/shared-types, @verisphere/forensics-engine, @verisphere/github-engine, @verisphere/ai-layer, IDocumentStorageService
- * @security Pipeline runs inside catch blocks to update database statuses to FAILED in event of unexpected crashes.
- * @future_implementation Use BullMQ or RabbitMQ backing to manage background queue jobs instead of in-memory async tasks.
- */
-
-import { VerificationStatus, TrustScoreBreakdown } from "@verisphere/shared-types";
-import { parsePdfBuffer, extractPdfMetadata, detectDocumentTampering } from "@verisphere/forensics-engine";
-import { collectGithubProfile, analyzeCommitTimeline, verifyRepositoryOwnership } from "@verisphere/github-engine";
-import { GeminiProvider } from "@verisphere/ai-layer/src/providers/gemini";
-import { VERIFICATION_SYSTEM_INSTRUCTION, INTERVIEW_GENERATION_SYSTEM_INSTRUCTION, buildVerificationPrompt } from "@verisphere/ai-layer/src/prompts/verification";
-import { AuditReportSchema, GeneratedQuestionsListSchema } from "@verisphere/ai-layer/src/schemas/outputs";
-import { IVerificationJobRepository, IDocumentStorageService, ICandidateRepository } from "../domain/interfaces";
+import { AILayer, SYSTEM_PROMPT_VERIFICATION, TrustCalculator } from '../../../../packages/ai-layer/src/index';
+import { 
+  AuditReport, 
+  VerificationJob, 
+  ResumeData,
+  GithubProfileMetrics
+} from '../../../../packages/shared-types/src/index';
+import { PrismaClient } from '@prisma/client';
 
 export class VerificationOrchestrator {
-  private jobRepo: IVerificationJobRepository;
-  private candidateRepo: ICandidateRepository;
-  private storageService: IDocumentStorageService;
-  private aiProvider: GeminiProvider;
+  private aiLayer: AILayer;
+  private trustCalculator: TrustCalculator;
+  private prisma: PrismaClient;
 
-  constructor(
-    jobRepo: IVerificationJobRepository,
-    candidateRepo: ICandidateRepository,
-    storageService: IDocumentStorageService,
-    aiProvider: GeminiProvider
-  ) {
-    this.jobRepo = jobRepo;
-    this.candidateRepo = candidateRepo;
-    this.storageService = storageService;
-    this.aiProvider = aiProvider;
+  constructor() {
+    this.aiLayer = new AILayer();
+    this.trustCalculator = new TrustCalculator();
+    this.prisma = new PrismaClient();
   }
 
   /**
-   * Enqueues and initiates the async verification pipeline run.
-   * 
-   * @param jobId - The database VerificationJob ID
-   * @param candidateId - The ID of the Candidate under check
+   * Orchestrates the verification process for a given job.
+   * Takes the raw evidence (Resume, GitHub) and passes it to the AI Layer,
+   * then applies scoring algorithms, and FINALLY saves it to Supabase.
    */
-  public async triggerVerification(jobId: string, candidateId: string): Promise<void> {
-    // Kickoff asynchronously (mimicking queue worker execution)
-    this.runPipeline(jobId, candidateId).catch(async (error) => {
-      console.error(`Pipeline failure for Job: ${jobId}`, error);
-      await this.jobRepo.updateStatus(jobId, VerificationStatus.FAILED, error.message || "Unknown error");
-    });
-  }
+  public async executeVerification(
+    job: VerificationJob, 
+    resume: ResumeData, 
+    githubMetrics: GithubProfileMetrics,
+    certificateValidityScore: number = 100 // Default to 100 if no cert is provided
+  ): Promise<AuditReport> {
+    
+    console.log(`[Orchestrator] Starting verification for Job ID: ${job.id}`);
+    
+    // 1. Send data to AI Layer for extraction and semantic matching
+    console.log(`[Orchestrator] Calling AI Layer...`);
+    const aiResponse = await this.aiLayer.analyzeCandidate(
+      resume.rawText, 
+      githubMetrics, 
+      SYSTEM_PROMPT_VERIFICATION
+    );
 
-  private async runPipeline(jobId: string, candidateId: string): Promise<void> {
-    // STEP 1: Update status to downloading
-    await this.jobRepo.updateStatus(jobId, VerificationStatus.DOWNLOADING);
-    
-    const candidate = await this.candidateRepo.findById(candidateId);
-    if (!candidate) throw new Error("Candidate record missing from system context.");
-
-    // STEP 2: Extract Resume & Certificates metadata
-    await this.jobRepo.updateStatus(jobId, VerificationStatus.EXTRACTING);
-    
-    // Simulating file downloads and forensics execution:
-    // const resumeBuf = await this.storageService.fetchFileBuffer(candidate.resumeUrl);
-    // const resumeLayout = await parsePdfBuffer(resumeBuf);
-    
-    // STEP 3: Scan GitHub metrics (if profile link present)
-    let githubMetrics = null;
-    if (candidate.githubUrl) {
-      await this.jobRepo.updateStatus(jobId, VerificationStatus.ANALYZING);
-      const username = candidate.githubUrl.split("/").pop() || "";
-      githubMetrics = await collectGithubProfile(username);
+    if (!aiResponse || !aiResponse.trustScore) {
+      throw new Error("AI Layer returned an invalid or incomplete report.");
     }
 
-    // STEP 4: Trigger Semantic AI analysis using Gemini 1.5 Flash
-    // We send resume text, github timeline analysis, and tamper forensics to AI Provider
-    const prompt = buildVerificationPrompt({
-      resumeText: "React: 5 years, Py: 3 years",
-      githubMetricsJson: JSON.stringify(githubMetrics),
-      forensicsReportJson: "{}"
-    });
-
-    const auditResults = await this.aiProvider.generateStructuredJSON(
-      prompt,
-      VERIFICATION_SYSTEM_INSTRUCTION,
-      AuditReportSchema
-    );
-
-    // STEP 5: Calculate Trust Score weights
-    // (Consolidating scores: Resume integrity 20%, GitHub commits 30%, certificate tamper 30%, repo ownership 20%)
-    const scoreBreakdown: TrustScoreBreakdown = {
-      overallScore: auditResults.trustScore.overallScore,
-      resumeConsistency: auditResults.trustScore.resumeConsistency,
-      githubEvidence: auditResults.trustScore.githubEvidence,
-      certificateValidity: auditResults.trustScore.certificateValidity,
-      contributionConfidence: auditResults.trustScore.contributionConfidence,
-      activityConfidence: auditResults.trustScore.activityConfidence
+    // 2. Inject the Certificate Validity Score (from Forensics Engine - Person 4)
+    const rawScores = {
+      resumeConsistency: aiResponse.trustScore.resumeConsistency,
+      githubEvidence: aiResponse.trustScore.githubEvidence,
+      contributionConfidence: aiResponse.trustScore.contributionConfidence,
+      activityConfidence: aiResponse.trustScore.activityConfidence,
+      certificateValidity: certificateValidityScore
     };
 
-    // STEP 6: Generate targeted interview questions targeting anomalies / gaps
-    const questionsPrompt = `Generate 5 technical questions probing: ${JSON.stringify(auditResults.contradictions)}`;
-    const questionsResults = await this.aiProvider.generateStructuredJSON(
-      questionsPrompt,
-      INTERVIEW_GENERATION_SYSTEM_INSTRUCTION,
-      GeneratedQuestionsListSchema
-    );
+    // 3. Calculate final mathematically-sound trust scores
+    console.log(`[Orchestrator] Calculating final trust score...`);
+    const finalTrustScore = this.trustCalculator.calculateOverallScore(rawScores);
 
-    // STEP 7: Save everything to DB and set status to COMPLETED
-    await this.jobRepo.saveResults(
-      jobId,
-      {
-        findingsSummary: auditResults.findingsSummary,
-        semanticMatchJson: JSON.stringify(auditResults.semanticMatches),
-        contradictions: auditResults.contradictions
-      },
-      scoreBreakdown,
-      questionsResults.questions
-    );
+    // 4. Assemble final Audit Report
+    const finalReport: AuditReport = {
+      id: `rep_${Date.now()}`,
+      jobId: job.id,
+      generatedAt: new Date(),
+      findingsSummary: aiResponse.findingsSummary || "No summary provided.",
+      semanticMatches: aiResponse.semanticMatches || [],
+      contradictions: aiResponse.contradictions || [],
+      riskIndicators: aiResponse.riskIndicators || [],
+      trustScore: finalTrustScore
+    };
 
-    await this.jobRepo.updateStatus(jobId, VerificationStatus.COMPLETED);
+    // 5. Save everything to Supabase Database via Prisma
+    console.log(`[Orchestrator] Saving Report to Supabase...`);
+    await this.prisma.auditReport.create({
+      data: {
+        id: finalReport.id,
+        jobId: finalReport.jobId,
+        findingsSummary: finalReport.findingsSummary,
+        semanticMatchJson: JSON.stringify(finalReport.semanticMatches),
+        contradictions: finalReport.contradictions
+      }
+    });
+
+    await this.prisma.trustScore.create({
+      data: {
+        jobId: job.id,
+        overallScore: finalTrustScore.overallScore,
+        resumeConsistency: finalTrustScore.resumeConsistency,
+        githubEvidence: finalTrustScore.githubEvidence,
+        certificateValidity: finalTrustScore.certificateValidity,
+        contributionConfidence: finalTrustScore.contributionConfidence,
+        activityConfidence: finalTrustScore.activityConfidence
+      }
+    });
+
+    if (finalReport.riskIndicators && finalReport.riskIndicators.length > 0) {
+      await this.prisma.riskIndicator.createMany({
+        data: finalReport.riskIndicators.map((r: any) => ({
+          jobId: job.id,
+          category: r.category,
+          severity: r.severity,
+          description: r.description,
+          evidence: r.evidence
+        }))
+      });
+    }
+
+    // Update job status to COMPLETED
+    await this.prisma.verificationJob.update({
+      where: { id: job.id },
+      data: {
+        status: "COMPLETED",
+        completedAt: new Date()
+      }
+    });
+
+    console.log(`[Orchestrator] Verification complete & saved. Final Score: ${finalTrustScore.overallScore}`);
+    
+    return finalReport;
+  }
+
+  /**
+   * Triggers the verification pipeline asynchronously in the background.
+   */
+  public async triggerVerification(jobId: string, candidateId: string): Promise<void> {
+    // Run the pipeline asynchronously without blocking the intake request
+    (async () => {
+      try {
+        console.log(`[Orchestrator] Asynchronously starting job ${jobId} for candidate ${candidateId}`);
+        
+        await this.prisma.verificationJob.update({
+          where: { id: jobId },
+          data: { status: "ANALYZING" }
+        });
+
+        const job: VerificationJob = {
+          id: jobId,
+          candidateId,
+          status: "ANALYZING" as any,
+          startedAt: new Date()
+        };
+
+        const resume: ResumeData = {
+          id: `res_${Date.now()}`,
+          candidateId,
+          fileUrl: "",
+          rawText: "Sample candidate resume text claiming experience with React, TypeScript, and PostgreSQL.",
+          skills: ["React", "TypeScript", "PostgreSQL"],
+          education: [],
+          experience: [],
+          projects: []
+        };
+
+        const githubMetrics: GithubProfileMetrics = {
+          id: `git_${Date.now()}`,
+          candidateId,
+          githubUsername: "candidate-dev",
+          publicReposCount: 2,
+          followersCount: 10,
+          followingCount: 12,
+          accountAgeMonths: 24,
+          totalCommitsCollected: 150,
+          analyzedRepos: [],
+          timelineAnomalyAlerts: [],
+          hasTimelineGaps: false
+        };
+
+        await this.executeVerification(job, resume, githubMetrics);
+      } catch (error: any) {
+        console.error(`[Orchestrator] Asynchronous verification failed for Job ${jobId}:`, error);
+        await this.prisma.verificationJob.update({
+          where: { id: jobId },
+          data: { 
+            status: "FAILED",
+            errorMsg: error?.message || String(error),
+            completedAt: new Date()
+          }
+        });
+      }
+    })();
   }
 }
