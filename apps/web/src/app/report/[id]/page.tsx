@@ -12,6 +12,7 @@ import { EvidenceRow } from "@/components/ui/EvidenceRow";
 import { RepoRow } from "@/components/ui/RepoRow";
 import { CertificateCard } from "@/components/ui/CertificateCard";
 import { InterviewCard } from "@/components/ui/InterviewCard";
+import { AcademicVerificationCard } from "@/components/ui/AcademicVerificationCard";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
 import { staggerContainer, staggerItem, fadeInUp, viewportOnce, tabContent } from "@/lib/motion-variants";
@@ -20,6 +21,7 @@ const COLORS = ['#2563EB', '#3B82F6', '#60A5FA', '#93C5FD'];
 
 const TABS = [
   { key: "overview", label: "Overview" },
+  { key: "academic", label: "Academic" },
   { key: "github", label: "GitHub Intelligence" },
   { key: "certificates", label: "Certificates" },
   { key: "interview", label: "Interview Prep" },
@@ -172,9 +174,9 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
           </div>
           
           <div className="w-1/3 flex flex-col justify-center border-r border-[var(--border)] px-8 gap-4">
-            <ScoreBar label="Skill Verification" score={report.trustScore + 10 > 100 ? 100 : report.trustScore + 10} colorClass="bg-[var(--verified)]" />
-            <ScoreBar label="Academic Match" score={academicVerification.length > 0 ? academicVerification[0].confidenceScore * 100 : 50} colorClass="bg-[var(--brand-blue)]" />
-            <ScoreBar label="GitHub Evidence" score={report.trustScore - 5} colorClass="bg-[var(--warning)]" />
+            <ScoreBar label="Skill Verification" score={Math.min(report.trustScore + 10, 100)} colorClass="bg-[var(--verified)]" />
+            <ScoreBar label="Academic Match" score={academicVerification.length > 0 ? Math.round(academicVerification[0].confidenceScore * 100) : 50} colorClass="bg-[var(--brand-blue)]" />
+            <ScoreBar label="GitHub Evidence" score={Math.max(report.trustScore - 5, 0)} colorClass="bg-[var(--warning)]" />
           </div>
 
           <div className="w-1/3 pl-8 flex flex-col justify-center">
@@ -227,6 +229,12 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
         <AnimatePresence mode="wait">
           <motion.div key={activeTab} variants={tabContent} initial="hidden" animate="visible" exit="exit">
             
+            {activeTab === 'academic' && (
+              <div>
+                <AcademicVerificationCard data={academicVerification} />
+              </div>
+            )}
+
             {activeTab === 'overview' && (
               <div className="grid grid-cols-12 gap-8">
                 <div className="col-span-8">

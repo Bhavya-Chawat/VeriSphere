@@ -48,12 +48,13 @@ export class MockAIProvider {
       for (const repo of githubMetrics.analyzedRepos) {
         const skillName = repo.language || "General Programming";
         if (!matchMap.has(skillName)) {
+          const confScore = Math.round((0.85 + (Math.random() * 0.1)) * 100) / 100;
           matchMap.set(skillName, {
             claimedSkill: skillName,
             matchedRepo: repo.name,
-            evidenceLevel: "STRONG",
-            notes: `Found substantial activity in repository ${repo.name}`,
-            confidenceScore: 0.85 + (Math.random() * 0.1)
+            evidenceLevel: confScore > 0.7 ? "STRONG" : "MODERATE",
+            notes: `Found substantial activity in repository '${repo.name}' with ${repo.commits || 'multiple'} commits`,
+            confidenceScore: confScore
           });
         }
       }
@@ -63,46 +64,57 @@ export class MockAIProvider {
         claimedSkill: "General Development",
         matchedRepo: "None",
         evidenceLevel: "NONE",
-        notes: "No GitHub repositories found.",
+        notes: "No GitHub repositories found to verify skill claims.",
         confidenceScore: 0.1
       }];
+    }
+
+    // Extract academic profile from resume text (best effort)
+    let academicProfile: any = {
+      institutionName: "",
+      degreeName: "",
+      branchOrSpecialization: "",
+      cgpaOrPercentage: "",
+      graduationYear: "",
+      enrollmentYear: "",
+      honors: [],
+      certifications: []
+    };
+
+    // Try to detect institution, degree, year patterns from raw resume text
+    const educationPatterns = [
+      /(?:university|college|institute|school)\s+(?:of\s+)?([\w\s,]+)/gi,
+      /(?:B\.?Tech|B\.?E|B\.?Sc|M\.?Tech|M\.?S|M\.?Sc|MBA|PhD|Ph\.?D)/gi,
+    ];
+    const yearPattern = /\b(20\d{2}|19\d{2})\b/g;
+    const years = (resumeText.match(yearPattern) || []).map(Number).sort();
+    if (years.length >= 2) {
+      academicProfile.enrollmentYear = String(years[0]);
+      academicProfile.graduationYear = String(years[years.length > 2 ? years.length - 2 : years.length - 1]);
     }
 
     const mockReport: any = {
       findingsSummary: `${candidateName} appears to have experience with ${skillsStr}. ${hasGitHub ? "GitHub activity supports these claims." : "Insufficient GitHub evidence to fully verify profile."}`,
       trustScore,
       semanticMatches,
+      academicProfile,
       contradictions: hasGitHub ? [] : ["Claimed developer experience but no GitHub evidence provided"],
       riskIndicators: hasGitHub ? [] : [{
         type: "LACK_OF_EVIDENCE",
         description: "Candidate profile lacks sufficient public repository activity.",
         level: "MEDIUM"
       }],
-      unsupportedClaims: [
-        {
-          claim: "10+ years of advanced system design",
-          reason: "No architectural documentation or high-complexity repos found in public GitHub profile."
-        },
-        {
-          claim: "Kubernetes expert",
-          reason: "No k8s manifests, helm charts, or related configurations found in evidence."
-        }
-      ],
+      unsupportedClaims: [],
       interviewQuestions: [
         {
           category: "Technical Validation",
-          question: "Can you walk me through the architecture of the 'ecommerce-platform' repository?",
-          reason: "To verify deep technical understanding of the Next.js and Prisma stack used in their most active repo."
+          question: `Walk me through the architecture of your most active repository.`,
+          reason: "To verify deep technical understanding of the technologies used."
         },
         {
           category: "Experience Validation",
-          question: "You mentioned 10+ years of system design experience, but your public repos are mostly frontend. Can you describe a complex backend system you designed?",
-          reason: "To cover the evidence gap found in the 'Unsupported Claims' section."
-        },
-        {
-          category: "Behavioral Assessment",
-          question: "How do you handle disagreements on technical design within a team?",
-          reason: "Standard behavioral question to assess collaboration skills."
+          question: "Describe a complex backend system you designed from scratch.",
+          reason: "To validate system design experience claimed on resume."
         }
       ]
     };

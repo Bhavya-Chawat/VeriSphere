@@ -74,9 +74,9 @@ export class PdfGeneratorService {
     }
 
     let academicVerification: any[] = [];
-    try { if (reportData.academicVerification) academicVerification = JSON.parse(reportData.academicVerification); } catch (e) {}
+    try { if (reportData.academicVerificationJson) academicVerification = JSON.parse(reportData.academicVerificationJson); } catch (e) {}
     
-    const academicScore = academicVerification.length > 0 ? academicVerification[0].confidenceScore * 100 : 50;
+    const academicScore = academicVerification.length > 0 ? Math.round(academicVerification[0].confidenceScore * 100) : 50;
 
     const data = {
       jobId: job.id,

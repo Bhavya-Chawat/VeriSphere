@@ -53,11 +53,23 @@ export function createVerificationRouter(
     try {
       // req.body contains text fields, req.file contains the uploaded file
       const githubUrl = req.body.githubUsername ? `https://github.com/${req.body.githubUsername}` : req.body.githubUrl;
+      
+      // Parse certificateAnalyses if provided as JSON string in FormData
+      let certificateAnalyses: any[] = [];
+      if (req.body.certificateAnalyses) {
+        try {
+          certificateAnalyses = JSON.parse(req.body.certificateAnalyses);
+        } catch (e) {
+          console.warn("[Intake] Failed to parse certificateAnalyses:", e);
+        }
+      }
+
       const candidateData = {
         ...req.body,
         githubUrl,
         resumeFileUrl: req.file ? req.file.path : undefined,
-        certificateUrls: [] // Can be updated to support multiple files later
+        certificateUrls: [],
+        certificateAnalyses
       };
       
       const result = await uploadCandidateUseCase.execute(candidateData);
@@ -145,7 +157,7 @@ export function createVerificationRouter(
       return res.status(404).json({ error: err.message });
     }
 
-    return res.status(500).json({ error: "Internal server error." });
+    return res.status(500).json({ error: "Internal server error.", details: err.message });
   });
 
   return router;

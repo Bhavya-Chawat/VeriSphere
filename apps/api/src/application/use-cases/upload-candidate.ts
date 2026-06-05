@@ -59,7 +59,7 @@ export class UploadCandidateUseCase {
     const job = await this.jobRepo.create(candidate.id);
 
     // 4. Trigger asynchronous engine pipeline (non-blocking)
-    await this.orchestrator.triggerVerification(job.id, candidate.id, request.resumeFileUrl);
+    await this.orchestrator.triggerVerification(job.id, candidate.id, request.resumeFileUrl, (request as any).certificateAnalyses);
 
     return {
       success: true,

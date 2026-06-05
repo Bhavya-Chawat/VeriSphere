@@ -14,6 +14,7 @@ export default function VerifyPage() {
   const [apiKey, setApiKey] = useState<string | null>(null);
 
   const [resumeFiles, setResumeFiles] = useState<File[]>([]);
+  const [certificateFiles, setCertificateFiles] = useState<File[]>([]);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -40,6 +41,33 @@ export default function VerifyPage() {
     setProgress(10); // Start progress
 
     try {
+      // 0. Process Certificates through forensics API
+      let certificateAnalyses: any[] = [];
+      if (certificateFiles.length > 0) {
+        const certPromises = certificateFiles.map(async (file) => {
+          const certFormData = new FormData();
+          certFormData.append("certificate", file);
+          const certRes = await fetch("http://localhost:4000/api/forensics/analyze", {
+            method: "POST",
+            body: certFormData,
+            headers: { "x-api-key": apiKey || "" }
+          });
+          if (!certRes.ok) {
+            console.warn(`Certificate analysis failed for ${file.name}`);
+            return null;
+          }
+          const certData = await certRes.json();
+          if (certData.success && certData.data) {
+            certData.data.title = file.name;
+            certData.data.issuer = certData.data.metadata?.creator || "Unknown Issuer";
+            return certData.data;
+          }
+          return null;
+        });
+        const results = await Promise.all(certPromises);
+        certificateAnalyses = results.filter(Boolean);
+      }
+
       // 1. Submit to Intake API using FormData to support file uploads
       const formData = new FormData();
       formData.append("firstName", firstName);
@@ -51,6 +79,9 @@ export default function VerifyPage() {
       formData.append("githubUsername", githubUsername);
       if (resumeFiles.length > 0) {
         formData.append("resumeFile", resumeFiles[0]);
+      }
+      if (certificateAnalyses.length > 0) {
+        formData.append("certificateAnalyses", JSON.stringify(certificateAnalyses));
       }
 
       const res = await fetch("http://localhost:4000/api/verification/intake", {
@@ -223,7 +254,7 @@ export default function VerifyPage() {
 
                 <div className="border-y border-[var(--border)] py-6 space-y-6">
                   <FileDropZone label="Resume PDF" required onFilesChange={setResumeFiles} />
-                  <FileDropZone label="Certificates (optional)" multiple />
+                  <FileDropZone label="Certificates (optional)" multiple onFilesChange={setCertificateFiles} />
                 </div>
 
                 <div className="pt-2">
