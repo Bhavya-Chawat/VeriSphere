@@ -9,6 +9,7 @@ export * from "./pdfMetadataExtractor";
 export * from "./sha256Extractor";
 export * from "./metadataRules";
 export * from "./scoreCalculator";
+export * from "./academicVerification";
 
 // Legacy exports for compatibility
 export * from "./pdfParser";

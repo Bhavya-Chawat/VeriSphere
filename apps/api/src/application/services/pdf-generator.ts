@@ -33,12 +33,17 @@ export class PdfGeneratorService {
     semanticMatches.forEach((m: any) => {
       const skill = m.claimedSkill || m.skill || "Unknown";
       if (skill !== "Unknown") {
-        if (!uniqueMatches.has(skill) || uniqueMatches.get(skill).confidenceScore < m.confidenceScore) {
+        const confScore = m.confidenceScore ?? 
+          (m.evidenceLevel === 'STRONG' ? 0.95 : 
+           m.evidenceLevel === 'MODERATE' ? 0.6 : 
+           m.evidenceLevel === 'NONE' ? 0.1 : 0);
+           
+        if (!uniqueMatches.has(skill) || uniqueMatches.get(skill).confidenceScore < confScore) {
           uniqueMatches.set(skill, {
             ...m,
             claimedSkill: skill,
-            confidencePercent: Math.round(m.confidenceScore * 100),
-            isHighConfidence: m.confidenceScore > 0.7
+            confidencePercent: Math.round(confScore * 100),
+            isHighConfidence: confScore > 0.7
           });
         }
       }
@@ -68,6 +73,11 @@ export class PdfGeneratorService {
       dbInterviewQuestions = reportData.interviewQuestions;
     }
 
+    let academicVerification: any[] = [];
+    try { if (reportData.academicVerification) academicVerification = JSON.parse(reportData.academicVerification); } catch (e) {}
+    
+    const academicScore = academicVerification.length > 0 ? academicVerification[0].confidenceScore * 100 : 50;
+
     const data = {
       jobId: job.id,
       timestamp: new Date().toLocaleString(),
@@ -79,6 +89,7 @@ export class PdfGeneratorService {
       findingsSummary: reportData.findingsSummary || "Verification completed.",
       scores: {
         resumeConsistency: reportData.trustScore > 0 ? (reportData.trustScore + 5 > 100 ? 100 : reportData.trustScore + 5) : 0,
+        academicScore: Math.round(academicScore),
         githubEvidence: reportData.trustScore > 0 ? reportData.trustScore - 5 : 0,
         certificateValidity: 100,
         contributionConfidence: reportData.trustScore > 0 ? (reportData.trustScore + 2 > 100 ? 100 : reportData.trustScore + 2) : 0
@@ -88,6 +99,8 @@ export class PdfGeneratorService {
       hasRisks: riskIndicators.length > 0,
       risks: riskIndicators,
       verifiedSkills: Array.from(uniqueMatches.values()),
+      hasAcademicVerification: academicVerification.length > 0,
+      academicVerification: academicVerification,
       hasUnsupportedClaims: dbUnsupportedClaims.length > 0,
       unsupportedClaims: dbUnsupportedClaims,
       analyzedRepos: githubMetrics.analyzedRepos || [],

@@ -4,7 +4,7 @@ import { AuditReport } from '@verisphere/shared-types';
 
 export class MockAIProvider {
   /**
-   * Reads from the dummy-data folder to simulate an AI response.
+   * Generates a hardcoded mock AI response for demonstration.
    */
   public async analyzeCandidate(resumeText: string, githubMetrics: any): Promise<Partial<AuditReport>> {
     console.log("[Mock AI] Generating dynamic candidate analysis using local fallback...");

@@ -11,6 +11,28 @@ import { UploadCandidateUseCase } from "../../application/use-cases/upload-candi
 import { ValidationError, ResourceNotFoundError } from "../../domain/entities";
 import { authMiddleware } from "../middleware/auth-middleware";
 import { PrismaClient } from "@prisma/client";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+
+// Ensure uploads directory exists
+const uploadDir = path.join(__dirname, "../../../../uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Configure multer for PDF uploads
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, file.fieldname + '-' + uniqueSuffix + '.pdf');
+    }
+  })
+});
 
 const prisma = new PrismaClient();
 
@@ -27,9 +49,18 @@ export function createVerificationRouter(
    * POST /api/verification/intake
    * Ingests candidate profile and triggers background scan job.
    */
-  router.post("/intake", async (req: Request, res: Response, next: NextFunction) => {
+  router.post("/intake", upload.single("resumeFile"), async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await uploadCandidateUseCase.execute(req.body);
+      // req.body contains text fields, req.file contains the uploaded file
+      const githubUrl = req.body.githubUsername ? `https://github.com/${req.body.githubUsername}` : req.body.githubUrl;
+      const candidateData = {
+        ...req.body,
+        githubUrl,
+        resumeFileUrl: req.file ? req.file.path : undefined,
+        certificateUrls: [] // Can be updated to support multiple files later
+      };
+      
+      const result = await uploadCandidateUseCase.execute(candidateData);
       return res.status(202).json(result);
     } catch (error) {
       next(error);
@@ -90,7 +121,7 @@ export function createVerificationRouter(
   router.get("/dashboard", async (req: Request, res: Response, next: NextFunction) => {
     try {
       const jobs = await prisma.verificationJob.findMany({
-        orderBy: { createdAt: "desc" },
+        orderBy: { startedAt: "desc" },
         take: 50,
         include: {
           candidate: true,

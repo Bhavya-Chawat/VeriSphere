@@ -17,6 +17,7 @@ export default function VerifyPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [institutionalEmail, setInstitutionalEmail] = useState("");
   const [githubUsername, setGithubUsername] = useState("");
   
   const [isProcessing, setIsProcessing] = useState(false);
@@ -39,21 +40,25 @@ export default function VerifyPage() {
     setProgress(10); // Start progress
 
     try {
-      // 1. Submit to Intake API
+      // 1. Submit to Intake API using FormData to support file uploads
+      const formData = new FormData();
+      formData.append("firstName", firstName);
+      formData.append("lastName", lastName);
+      formData.append("email", email);
+      if (institutionalEmail.trim() !== "") {
+        formData.append("institutionalEmail", institutionalEmail.trim());
+      }
+      formData.append("githubUsername", githubUsername);
+      if (resumeFiles.length > 0) {
+        formData.append("resumeFile", resumeFiles[0]);
+      }
+
       const res = await fetch("http://localhost:4000/api/verification/intake", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           "x-api-key": apiKey || ""
         },
-        body: JSON.stringify({
-          firstName,
-          lastName,
-          email,
-          githubUrl: `https://github.com/${githubUsername}`,
-          resumeFileUrl: "dummy-url",
-          certificateUrls: []
-        })
+        body: formData
       });
 
       if (!res.ok) {
@@ -203,10 +208,17 @@ export default function VerifyPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Email</label>
-                  <div className="relative flex items-center">
+                  <div className="relative flex items-center mb-4">
                     <Mail className="absolute left-4 text-[var(--text-tertiary)]" size={18} />
                     <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-[var(--bg-subtle)] border border-[var(--border)] rounded-xl py-3 pl-12 pr-4 text-[var(--text-primary)] outline-none focus:border-[var(--brand-blue)] transition-colors" placeholder="john@example.com" />
                   </div>
+                  
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Institutional Email (Optional)</label>
+                  <div className="relative flex items-center">
+                    <Mail className="absolute left-4 text-[var(--text-tertiary)]" size={18} />
+                    <input type="email" value={institutionalEmail} onChange={(e) => setInstitutionalEmail(e.target.value)} className="w-full bg-[var(--bg-subtle)] border border-[var(--border)] rounded-xl py-3 pl-12 pr-4 text-[var(--text-primary)] outline-none focus:border-[var(--brand-blue)] transition-colors" placeholder="john@university.edu" />
+                  </div>
+                  <p className="text-xs text-[var(--text-tertiary)] mt-2">Providing a .edu or institutional email speeds up academic verification.</p>
                 </div>
 
                 <div className="border-y border-[var(--border)] py-6 space-y-6">

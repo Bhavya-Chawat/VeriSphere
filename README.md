@@ -21,8 +21,7 @@ verisphere/
 │   ├── ARCHITECTURE.md      # Data pipeline orchestration & layers map
 │   ├── API_DOCS.md          # REST API payloads schemas
 │   └── AI_PIPELINE.md       # Prompts configuration & Structured Output schemas
-├── infrastructure/
-│   └── docker/              # Dockerfiles & compose files
+
 └── .github/
     └── workflows/           # CI-CD continuous integration settings
 ```

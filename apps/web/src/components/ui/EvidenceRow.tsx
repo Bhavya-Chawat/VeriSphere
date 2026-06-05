@@ -4,7 +4,12 @@ import { Check, AlertTriangle, ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
 import { staggerItem } from "@/lib/motion-variants";
 
-export function EvidenceRow({ claim, source, status, href }: { claim: string, source: string, status: 'VERIFIED' | 'UNVERIFIED', href?: string }) {
+export function EvidenceRow({ claim, source, status, href }: {
+  claim: string;
+  source: string;
+  status: "VERIFIED" | "UNVERIFIED" | "PARTIAL";
+  href?: string;
+}) {
   const isVerified = status === 'VERIFIED';
   
   return (

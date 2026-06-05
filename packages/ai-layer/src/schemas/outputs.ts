@@ -29,10 +29,22 @@ export const SemanticMatchSchema = z.object({
   notes: z.string()
 });
 
+export const AcademicProfileSchema = z.object({
+  institutionName: z.string(),
+  degreeName: z.string(),
+  branchOrSpecialization: z.string(),
+  cgpaOrPercentage: z.string(),
+  graduationYear: z.string(),
+  enrollmentYear: z.string(),
+  honors: z.array(z.string()),
+  certifications: z.array(z.string())
+});
+
 export const TrustScoreBreakdownSchema = z.object({
   overallScore: z.number().min(0).max(100),
   resumeConsistency: z.number().min(0).max(100),
   githubEvidence: z.number().min(0).max(100),
+  academicScore: z.number().min(0).max(100),
   certificateValidity: z.number().min(0).max(100),
   contributionConfidence: z.number().min(0).max(100),
   activityConfidence: z.number().min(0).max(100)
@@ -40,6 +52,7 @@ export const TrustScoreBreakdownSchema = z.object({
 
 export const AuditReportSchema = z.object({
   findingsSummary: z.string(),
+  academicProfile: AcademicProfileSchema.optional(),
   semanticMatches: z.array(SemanticMatchSchema),
   contradictions: z.array(z.string()),
   riskIndicators: z.array(RiskIndicatorSchema),

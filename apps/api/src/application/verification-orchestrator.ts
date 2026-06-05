@@ -6,6 +6,8 @@ import {
   GithubProfileMetrics
 } from '@verisphere/shared-types';
 import { PrismaClient } from '@prisma/client';
+import { parsePdfBuffer, verifyAcademicProfile } from '@verisphere/forensics-engine';
+import fs from 'fs';
 
 export class VerificationOrchestrator {
   private aiLayer: AILayer;
@@ -25,7 +27,8 @@ export class VerificationOrchestrator {
     job: VerificationJob, 
     resume: ResumeData, 
     githubMetrics: GithubProfileMetrics,
-    certificateValidityScore: number = 100
+    certificateValidityScore: number = 100,
+    institutionalEmail?: string
   ): Promise<AuditReport> {
     
     console.log(`[Orchestrator] Starting verification for Job ID: ${job.id}`);
@@ -42,6 +45,17 @@ export class VerificationOrchestrator {
       throw new Error("AI Layer returned an empty response.");
     }
 
+    // Academic Verification
+    console.log(`[Orchestrator] Running Academic Verification...`);
+    const academicVerificationResults = verifyAcademicProfile(
+      aiResponse.academicProfile,
+      institutionalEmail
+    );
+    
+    const academicScore = academicVerificationResults.length > 0 
+      ? academicVerificationResults[0].confidenceScore * 100 
+      : 50;
+
     // 2. Extract trust score sub-fields from the nested trustScore object
     const aiTrustScore = aiResponse.trustScore || {};
     const rawScores = {
@@ -49,6 +63,7 @@ export class VerificationOrchestrator {
       githubEvidence: typeof aiTrustScore === 'object' ? (aiTrustScore.githubEvidence ?? 70) : 70,
       contributionConfidence: typeof aiTrustScore === 'object' ? (aiTrustScore.contributionConfidence ?? 70) : 70,
       activityConfidence: typeof aiTrustScore === 'object' ? (aiTrustScore.activityConfidence ?? 70) : 70,
+      academicScore: academicScore,
       certificateValidity: certificateValidityScore
     };
 
@@ -68,6 +83,7 @@ export class VerificationOrchestrator {
       createdAt: new Date(),
       findingsSummary: aiResponse.findingsSummary || "No summary provided.",
       semanticMatchJson: JSON.stringify(aiResponse.semanticMatches || []),
+      academicVerificationJson: JSON.stringify(academicVerificationResults),
       contradictions: aiResponse.contradictions || [],
       riskIndicatorsJson: JSON.stringify(aiResponse.riskIndicators || []),
       trustScore: trustScoreValue
@@ -81,8 +97,9 @@ export class VerificationOrchestrator {
           jobId: finalReport.jobId,
           findingsSummary: finalReport.findingsSummary,
           semanticMatchJson: finalReport.semanticMatchJson,
+          academicVerificationJson: finalReport.academicVerificationJson,
           contradictions: finalReport.contradictions,
-          trustScore: finalReport.trustScore,
+          trustScore: Math.round(trustScoreValue),
           riskIndicatorsJson: finalReport.riskIndicatorsJson
         }
       });
@@ -110,7 +127,7 @@ export class VerificationOrchestrator {
   /**
    * Triggers the verification pipeline asynchronously in the background.
    */
-  public async triggerVerification(jobId: string, candidateId: string): Promise<void> {
+  public async triggerVerification(jobId: string, candidateId: string, resumeFileUrl?: string): Promise<void> {
     // Run the pipeline asynchronously without blocking the intake request
     (async () => {
       try {
@@ -137,12 +154,21 @@ export class VerificationOrchestrator {
           createdAt: new Date()
         };
 
-        // Dynamically create placeholder resume data based on actual candidate name
+        let rawText = `${candidateRecord.firstName} ${candidateRecord.lastName} - Candidate Profile.`;
+        
+        // Parse the actual uploaded PDF resume if provided
+        if (resumeFileUrl && fs.existsSync(resumeFileUrl)) {
+          console.log(`[Orchestrator] Parsing uploaded PDF resume: ${resumeFileUrl}`);
+          const pdfBuffer = fs.readFileSync(resumeFileUrl);
+          const parsedPdf = await parsePdfBuffer(pdfBuffer);
+          rawText = parsedPdf.rawText;
+        }
+
         const resume: ResumeData = {
           id: `res_${Date.now()}`,
           candidateId,
-          fileUrl: "",
-          rawText: `${candidateRecord.firstName} ${candidateRecord.lastName} - Candidate Profile. Resume parsing not yet implemented.`,
+          fileUrl: resumeFileUrl || "",
+          rawText,
           skills: [],
           education: [],
           experience: [],
@@ -189,16 +215,22 @@ export class VerificationOrchestrator {
               hasTimelineGaps: githubEvidenceReport.timelineFlags.length > 0
             };
             
-            // Add fetched skills to the dynamic resume so the AI can match them
+            // Remove fake skill injection; actual resume parsing handles skills now.
             resume.skills = githubEvidenceReport.verifiedSkills;
-            resume.rawText += ` Detected skills from GitHub: ${githubEvidenceReport.verifiedSkills.join(', ')}.`;
+            
           } catch (githubErr) {
             console.error(`[Orchestrator] GitHub Scraping failed:`, githubErr);
             // We proceed with empty githubMetrics if scraping fails
           }
         }
 
-        await this.executeVerification(job, resume, githubMetrics);
+        await this.executeVerification(
+          job, 
+          resume, 
+          githubMetrics, 
+          100, // certificateValidityScore
+          candidateRecord.institutionalEmail || undefined
+        );
       } catch (error: any) {
         console.error(`[Orchestrator] Asynchronous verification failed for Job ${jobId}:`, error);
         try {
@@ -206,7 +238,7 @@ export class VerificationOrchestrator {
             where: { id: jobId },
             data: { 
               status: "FAILED",
-              errorMsg: error?.message || String(error),
+              errorMsg: error instanceof Error ? error.message : "Unknown error occurred",
               completedAt: new Date()
             }
           });

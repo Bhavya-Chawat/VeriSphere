@@ -40,6 +40,7 @@ export interface Candidate {
   firstName: string;
   lastName: string;
   email: string;
+  institutionalEmail?: string;
   githubUrl?: string;
   createdAt: Date;
 }
@@ -57,12 +58,26 @@ export interface VerificationJob {
   createdAt: Date;
 }
 
+export interface AcademicVerificationResult {
+  claimedInstitution: string;
+  normalizedInstitution: string;
+  degree: string;
+  specialization?: string;
+  graduationTimeline: string;
+  domainMatch: boolean;
+  institutionVerified: boolean;
+  confidenceScore: number; // 0-1
+  evidenceLevel: "STRONG" | "MODERATE" | "NONE" | "CONTRADICTORY";
+  riskFlags: string[];
+}
+
 export interface AuditReport {
   id: string;
   jobId: string;
   trustScore: number; // 0-100 overall score
   findingsSummary: string;
   semanticMatchJson: string; // Stores the detailed matches
+  academicVerificationJson?: string; // Stores AcademicVerificationResult[] as JSON
   contradictions: string[];
   riskIndicatorsJson: string; // Stores risks as JSON
   createdAt: Date;
@@ -74,6 +89,7 @@ export interface CreateCandidateRequest {
   firstName: string;
   lastName: string;
   email: string;
+  institutionalEmail?: string;
   githubUrl?: string;
   resumeFileUrl: string;
   certificateUrls: string[];
@@ -116,6 +132,17 @@ export interface GithubProfileMetrics {
   hasTimelineGaps: boolean;
 }
 
+export interface AcademicProfile {
+  institutionName: string;
+  degreeName: string;
+  branchOrSpecialization: string;
+  cgpaOrPercentage: string;
+  graduationYear: string;
+  enrollmentYear: string;
+  honors: string[];
+  certifications: string[];
+}
+
 export interface ResumeData {
   id: string;
   candidateId: string;
@@ -123,6 +150,7 @@ export interface ResumeData {
   rawText: string;
   skills: string[];
   education: Array<any>;
+  academicProfile?: AcademicProfile; // Extracted academic claims
   experience: Array<any>;
   projects: Array<any>;
 }
@@ -131,6 +159,7 @@ export interface TrustScoreBreakdown {
   overallScore: number; // 0-100
   resumeConsistency: number; // 0-100
   githubEvidence: number; // 0-100
+  academicScore: number; // 0-100
   certificateValidity: number; // 0-100
   contributionConfidence: number; // 0-100
   activityConfidence: number; // 0-100

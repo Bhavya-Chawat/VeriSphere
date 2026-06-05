@@ -8,53 +8,41 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-model User {
-  id             String   @id @default(uuid())
-  email          String   @unique
-  firstName      String
-  lastName       String
-  organizationId String?
-  role           String   // "USER", "ADMIN", "ORGANIZATION_ADMIN"
-  createdAt      DateTime @default(now())
-}
-
-model Organization {
-  id        String   @id @default(uuid())
-  name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
-}
-
 model Candidate {
-  id             String   @id @default(uuid())
-  organizationId String
-  firstName      String
-  lastName       String
-  email          String
-  githubUrl      String?
-  createdAt      DateTime @default(now())
-  jobs           VerificationJob[]
+  id                 String            @id @default(uuid())
+  firstName          String
+  lastName           String
+  email              String
+  institutionalEmail String?
+  githubUrl          String?
+  createdAt          DateTime          @default(now())
+  jobs               VerificationJob[]
 }
 
 model VerificationJob {
-  id           String   @id @default(uuid())
-  candidateId  String
-  candidate    Candidate @relation(fields: [candidateId], references: [id])
-  status       String   // QUEUED, DOWNLOADING, EXTRACTING, ANALYZING, COMPLETED, FAILED
-  startedAt    DateTime @default(now())
-  completedAt  DateTime?
-  errorMessage String?
-  report       AuditReport?
+  id                  String       @id @default(uuid())
+  candidateId         String
+  status              String       @default("QUEUED")
+  startedAt           DateTime     @default(now())
+  completedAt         DateTime?
+  certificateDataJson String?
+  createdAt           DateTime     @default(now())
+  errorMsg            String?
+  githubMetricsJson   String?
+  resumeDataJson      String?
+  report              AuditReport?
+  candidate           Candidate    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
 }
 
 model AuditReport {
-  id              String   @id @default(uuid())
-  jobId           String   @unique
-  job             VerificationJob @relation(fields: [jobId], references: [id])
-  generatedAt     DateTime @default(now())
-  findingsSummary String
-  semanticMatches Json     // Array of SemanticMatchResult
-  contradictions  Json     // Array of strings
-  riskIndicators  Json     // Array of RiskIndicator
-  trustScore      Json     // TrustScoreBreakdown
+  id                       String          @id @default(uuid())
+  jobId                    String          @unique
+  findingsSummary          String
+  createdAt                DateTime        @default(now())
+  riskIndicatorsJson       String
+  semanticMatchJson        String
+  academicVerificationJson String?
+  contradictions           String[]
+  trustScore               Int
+  job                      VerificationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
 }

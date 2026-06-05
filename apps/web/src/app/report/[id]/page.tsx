@@ -92,6 +92,10 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
   let riskIndicators = [];
   try { if (report.riskIndicatorsJson) riskIndicators = JSON.parse(report.riskIndicatorsJson); } catch(e) {}
 
+  let academicVerification: any[] = [];
+  try { if (report.academicVerificationJson) academicVerification = JSON.parse(report.academicVerificationJson); } catch(e) {}
+
+
   // Calculate dynamic pie chart data
   const languageCounts: Record<string, number> = {};
   githubMetrics.analyzedRepos?.forEach((r: any) => {
@@ -169,6 +173,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
           
           <div className="w-1/3 flex flex-col justify-center border-r border-[var(--border)] px-8 gap-4">
             <ScoreBar label="Skill Verification" score={report.trustScore + 10 > 100 ? 100 : report.trustScore + 10} colorClass="bg-[var(--verified)]" />
+            <ScoreBar label="Academic Match" score={academicVerification.length > 0 ? academicVerification[0].confidenceScore * 100 : 50} colorClass="bg-[var(--brand-blue)]" />
             <ScoreBar label="GitHub Evidence" score={report.trustScore - 5} colorClass="bg-[var(--warning)]" />
           </div>
 
@@ -228,16 +233,32 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
                   <motion.div variants={fadeInUp} className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] shadow-[var(--shadow-sm)] p-6 mb-8">
                     <h3 className="text-lg font-bold text-[var(--text-primary)] mb-4">Evidence Trail</h3>
                     <motion.div variants={staggerContainer} className="flex flex-col">
+                      {academicVerification.map((av: any, i: number) => {
+                        const confScore = av.confidenceScore ?? 0;
+                        return (
+                          <EvidenceRow 
+                            key={`acad-${i}`} 
+                            claim={`${av.degree} at ${av.claimedInstitution}`} 
+                            source={`Confidence: ${Math.round(confScore * 100)}%`} 
+                            status={av.domainMatch ? "VERIFIED" : (confScore > 0.4 ? "PARTIAL" : "UNVERIFIED")} 
+                            href={undefined}
+                          />
+                        );
+                      })}
                       {semanticMatches.map((match: any, i: number) => {
                         const href = candidate.githubUrl && match.matchedRepo && match.matchedRepo !== "None" 
                           ? `${candidate.githubUrl}/${match.matchedRepo}`
                           : undefined;
+                        const confScore = match.confidenceScore ?? 
+                          (match.evidenceLevel === 'STRONG' ? 0.95 : 
+                           match.evidenceLevel === 'MODERATE' ? 0.6 : 
+                           match.evidenceLevel === 'NONE' ? 0.1 : 0);
                         return (
                           <EvidenceRow 
                             key={i} 
                             claim={`${match.claimedSkill} claimed`} 
-                            source={`Confidence: ${Math.round(match.confidenceScore * 100)}%`} 
-                            status={match.confidenceScore > 0.7 ? "VERIFIED" : "UNVERIFIED"} 
+                            source={`Confidence: ${Math.round(confScore * 100)}%`} 
+                            status={confScore > 0.7 ? "VERIFIED" : "UNVERIFIED"} 
                             href={href}
                           />
                         );

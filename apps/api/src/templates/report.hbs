@@ -111,6 +111,7 @@
             <div class="card">
                 <h3>Trust Score Breakdown</h3>
                 <table style="margin-bottom: 0;">
+                    <tr><td style="padding: 6px 0; border: none;">Academic Match</td><td style="padding: 6px 0; border: none; text-align: right; font-weight: 600;">{{scores.academicScore}} / 100</td></tr>
                     <tr><td style="padding: 6px 0; border: none;">Resume Consistency</td><td style="padding: 6px 0; border: none; text-align: right; font-weight: 600;">{{scores.resumeConsistency}} / 100</td></tr>
                     <tr><td style="padding: 6px 0; border: none;">GitHub Evidence</td><td style="padding: 6px 0; border: none; text-align: right; font-weight: 600;">{{scores.githubEvidence}} / 100</td></tr>
                     <tr><td style="padding: 6px 0; border: none;">Certificate Validity</td><td style="padding: 6px 0; border: none; text-align: right; font-weight: 600;">{{scores.certificateValidity}} / 100</td></tr>
@@ -127,6 +128,44 @@
                 <p><strong>Total Commits:</strong> {{totalCommits}}</p>
             </div>
         </div>
+
+        {{#if hasAcademicVerification}}
+        <h2 style="margin-top: 40px;">1.5 Academic Profile</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 30%;">Claimed Institution</th>
+                    <th style="width: 25%;">Degree</th>
+                    <th style="width: 15%;">Confidence</th>
+                    <th style="width: 30%;">Notes / Domain Match</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each academicVerification}}
+                <tr class="avoid-break">
+                    <td style="font-weight: 600;">{{claimedInstitution}}</td>
+                    <td>{{degree}}</td>
+                    <td>
+                        {{#if domainMatch}}
+                            <span class="badge badge-green">100% (Domain Match)</span>
+                        {{else}}
+                            {{#if institutionVerified}}
+                                <span class="badge badge-yellow">50% (Name Match)</span>
+                            {{else}}
+                                <span class="badge badge-red">UNVERIFIED</span>
+                            {{/if}}
+                        {{/if}}
+                    </td>
+                    <td style="font-size: 8.5pt;">
+                        {{#each riskFlags}}
+                            <div>- {{this}}</div>
+                        {{/each}}
+                    </td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+        {{/if}}
 
         <h2 style="margin-top: 40px;">2. Risk Assessment</h2>
         {{#if hasRisks}}
