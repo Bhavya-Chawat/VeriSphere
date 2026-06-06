@@ -340,7 +340,6 @@ export default function LandingPage() {
               { Icon: Terminal, title: 'GitHub Intelligence', desc: 'Analyzes ownership, commit history, and language proof' },
               { Icon: Award, title: 'Certificate Validation', desc: 'PDF metadata forensics to detect tampering' },
               { Icon: Cpu, title: 'AI Reasoning', desc: 'Gemini synthesizes all evidence into a structured verdict' },
-              { Icon: MessageSquare, title: 'Interview Prep', desc: 'Auto-generates targeted questions for unverified claims' },
               { Icon: ListChecks, title: 'Audit Trail', desc: 'Full evidence chain with source citations' },
             ].map((feature, i) => (
               <motion.div 

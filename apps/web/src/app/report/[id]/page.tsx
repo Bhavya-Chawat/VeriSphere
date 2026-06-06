@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Download, Flag, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Download, Flag, ShieldAlert, CheckCircle2, AlertTriangle, XCircle, Info, Github } from "lucide-react";
 import { TrustGauge } from "@/components/ui/TrustGauge";
 import { ScoreBar } from "@/components/ui/ScoreBar";
 import { SkillPill } from "@/components/ui/SkillPill";
@@ -24,7 +24,6 @@ const TABS = [
   { key: "academic", label: "Academic" },
   { key: "github", label: "GitHub Intelligence" },
   { key: "certificates", label: "Certificates" },
-  { key: "interview", label: "Interview Prep" },
 ];
 
 export default function ReportPage({ params }: { params: Promise<{ id: string }> }) {
@@ -300,48 +299,182 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
             )}
 
             {activeTab === 'github' && (
-              <div>
-                <motion.div variants={staggerContainer} className="grid grid-cols-3 gap-6 mb-8">
-                  <motion.div variants={staggerItem} className="bg-[var(--bg-surface)] rounded-xl border border-[var(--border)] p-6 shadow-[var(--shadow-sm)]">
-                    <div className="text-xs text-[var(--text-secondary)] uppercase tracking-wider font-bold mb-1">Repositories Scanned</div>
-                    <div className="text-3xl font-mono text-[var(--brand-navy)] font-bold">{githubMetrics.publicReposCount}</div>
+              <div className="flex flex-col gap-8">
+                {/* Metrics */}
+                <motion.div variants={staggerContainer} className="grid grid-cols-4 gap-6">
+                  <motion.div variants={staggerItem} className="bg-[var(--bg-surface)] rounded-xl border border-[var(--border)] p-6 shadow-sm flex flex-col justify-center">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-[var(--bg-subtle)] flex items-center justify-center text-[var(--text-secondary)]">
+                        <Github size={16} />
+                      </div>
+                      <div className="text-xs text-[var(--text-secondary)] font-semibold uppercase tracking-wider">Repositories</div>
+                    </div>
+                    <div className="text-3xl font-bold text-[var(--text-primary)]">{githubMetrics.publicReposCount}</div>
                   </motion.div>
-                  <motion.div variants={staggerItem} className="bg-[var(--bg-surface)] rounded-xl border border-[var(--border)] p-6 shadow-[var(--shadow-sm)]">
-                    <div className="text-xs text-[var(--text-secondary)] uppercase tracking-wider font-bold mb-1">Total Commits</div>
-                    <div className="text-3xl font-mono text-[var(--brand-navy)] font-bold">{githubMetrics.totalCommitsCollected}</div>
+                  <motion.div variants={staggerItem} className="bg-[var(--bg-surface)] rounded-xl border border-[var(--border)] p-6 shadow-sm flex flex-col justify-center">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-[var(--bg-subtle)] flex items-center justify-center text-[var(--text-secondary)]">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                      </div>
+                      <div className="text-xs text-[var(--text-secondary)] font-semibold uppercase tracking-wider">Total Commits</div>
+                    </div>
+                    <div className="text-3xl font-bold text-[var(--text-primary)]">{githubMetrics.totalCommitsCollected}</div>
                   </motion.div>
-                  <motion.div variants={staggerItem} className="bg-[var(--bg-surface)] rounded-xl border border-[var(--border)] p-6 shadow-[var(--shadow-sm)]">
-                    <div className="text-xs text-[var(--text-secondary)] uppercase tracking-wider font-bold mb-1">Primary Languages</div>
-                    <div className="text-3xl font-mono text-[var(--brand-navy)] font-bold">{Object.keys(languageCounts).length}</div>
+                  <motion.div variants={staggerItem} className="bg-[var(--bg-surface)] rounded-xl border border-[var(--border)] p-6 shadow-sm flex flex-col justify-center">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-[var(--bg-subtle)] flex items-center justify-center text-[var(--text-secondary)]">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                      </div>
+                      <div className="text-xs text-[var(--text-secondary)] font-semibold uppercase tracking-wider">Languages</div>
+                    </div>
+                    <div className="text-3xl font-bold text-[var(--text-primary)]">{Object.keys(languageCounts).length}</div>
+                  </motion.div>
+                  <motion.div variants={staggerItem} className="bg-[var(--bg-surface)] rounded-xl border border-[var(--border)] p-6 shadow-sm flex flex-col justify-center">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+                        <CheckCircle2 size={16} />
+                      </div>
+                      <div className="text-xs text-[var(--text-secondary)] font-semibold uppercase tracking-wider">Skills Validated</div>
+                    </div>
+                    <div className="flex items-end gap-2">
+                      <div className="text-3xl font-bold text-[var(--text-primary)]">{semanticMatches.filter((m: any) => m.evidenceLevel === 'STRONG' || m.evidenceLevel === 'MODERATE' || m.confidenceScore > 0.5).length}</div>
+                      <div className="text-sm text-[var(--text-tertiary)] mb-1">/ {semanticMatches.length}</div>
+                    </div>
                   </motion.div>
                 </motion.div>
 
-                <div className="grid grid-cols-12 gap-8 mb-8">
-                  <div className="col-span-8 bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] shadow-[var(--shadow-sm)] overflow-hidden">
-                    <div className="grid grid-cols-12 gap-4 p-4 bg-[var(--bg-subtle)] border-b border-[var(--border)] text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">
-                      <div className="col-span-3">Repository</div>
-                      <div className="col-span-2">Language</div>
-                      <div className="col-span-2">Commits</div>
-                      <div className="col-span-2">Last Active</div>
-                      <div className="col-span-3">Skill Match</div>
+                <div className="grid grid-cols-12 gap-8">
+                  {/* Language Distribution */}
+                  <div className="col-span-4 flex flex-col gap-8">
+                    <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] shadow-sm p-6 flex flex-col h-full">
+                      <h3 className="text-sm font-bold text-[var(--text-primary)] mb-6 flex items-center gap-2">
+                        Language Distribution
+                      </h3>
+                      <div className="h-48 relative mb-6">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie data={pieData} innerRadius={65} outerRadius={85} paddingAngle={3} dataKey="value" stroke="none">
+                              {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                            </Pie>
+                            <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                          <span className="text-2xl font-bold text-[var(--text-primary)]">{pieData[0]?.name || "N/A"}</span>
+                          <span className="text-xs text-[var(--text-secondary)]">Top Language</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-col gap-4 mt-auto">
+                        {pieData.map((lang, idx) => (
+                          <div key={idx} className="flex flex-col gap-1.5">
+                            <div className="flex items-center justify-between text-xs">
+                              <div className="flex items-center gap-2 font-medium text-[var(--text-primary)]">
+                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                                {lang.name}
+                              </div>
+                              <span className="text-[var(--text-secondary)]">{lang.value}%</span>
+                            </div>
+                            <div className="w-full bg-[var(--bg-subtle)] rounded-full h-1.5 overflow-hidden">
+                              <motion.div 
+                                initial={{ width: 0 }} animate={{ width: `${lang.value}%` }} transition={{ duration: 1, delay: 0.2 }}
+                                className="h-full rounded-full" 
+                                style={{ backgroundColor: COLORS[idx % COLORS.length] }} 
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    {githubMetrics.analyzedRepos?.map((repo: any, i: number) => (
-                       <RepoRow key={i} repoName={repo.name} language={repo.language || "Unknown"} commits={repo.commits} date="Recently" skills={[]} sparklineData={[]} recentCommits={repo.recentCommits} />
-                    ))}
                   </div>
-                  <div className="col-span-4 bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] shadow-[var(--shadow-sm)] p-6">
-                    <h3 className="text-sm font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-6">Language Distribution</h3>
-                    <div className="h-48">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie data={pieData} innerRadius={60} outerRadius={80} paddingAngle={2} dataKey="value">
-                            {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
+
+                  {/* Skills Validation Judgments */}
+                  <div className="col-span-8 bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden flex flex-col h-full">
+                    <div className="px-6 py-5 border-b border-[var(--border)] bg-[var(--bg-subtle)]">
+                      <h3 className="text-sm font-bold text-[var(--text-primary)]">Skill Validation & AI Judgments</h3>
+                      <p className="text-xs text-[var(--text-secondary)] mt-1">Showing how the AI mapped claimed skills to GitHub repositories.</p>
+                    </div>
+                    <div className="flex flex-col overflow-y-auto max-h-[500px]">
+                      {semanticMatches.length === 0 ? (
+                        <div className="p-8 text-center text-[var(--text-secondary)] text-sm">No skill judgments available.</div>
+                      ) : (
+                        semanticMatches.map((match: any, idx: number) => {
+                          const isVerified = match.evidenceLevel === 'STRONG' || match.evidenceLevel === 'MODERATE' || match.confidenceScore > 0.5;
+                          const isStrong = match.evidenceLevel === 'STRONG' || match.confidenceScore > 0.8;
+                          return (
+                            <div key={idx} className="p-5 border-b border-[var(--border)] last:border-0 hover:bg-[var(--bg-page)] transition-colors grid grid-cols-12 gap-6">
+                              <div className="col-span-3 flex flex-col gap-2">
+                                <span className="font-semibold text-sm text-[var(--text-primary)]">{match.claimedSkill}</span>
+                                {isStrong ? (
+                                  <span className="inline-flex items-center gap-1 w-fit rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                                    <CheckCircle2 size={10} /> Strong Evidence
+                                  </span>
+                                ) : isVerified ? (
+                                  <span className="inline-flex items-center gap-1 w-fit rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                                    <AlertTriangle size={10} /> Moderate Evidence
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 w-fit rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700">
+                                    <XCircle size={10} /> No Evidence
+                                  </span>
+                                )}
+                              </div>
+                              <div className="col-span-9 flex flex-col gap-3">
+                                <div className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                                  {match.notes || match.reasoning || "The AI verified this skill based on repository analysis."}
+                                </div>
+                                {match.matchedRepo && match.matchedRepo !== "None" && (
+                                  <div className="flex items-center gap-2 text-xs font-mono bg-[var(--bg-subtle)] w-fit px-3 py-1.5 rounded-lg border border-[var(--border)] text-[var(--text-primary)] shadow-sm">
+                                    <Github size={12} className="text-[var(--text-tertiary)]" /> {match.matchedRepo}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
                   </div>
+                </div>
+
+                {/* Repositories Table */}
+                <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden mt-2">
+                  <div className="px-6 py-5 border-b border-[var(--border)] bg-[var(--bg-subtle)] flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-[var(--text-primary)]">Repository Analysis</h3>
+                      <p className="text-xs text-[var(--text-secondary)] mt-1">Deep dive into {githubMetrics.analyzedRepos?.length || 0} repositories scanned.</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-[var(--bg-page)] border-b border-[var(--border)] text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                    <div className="col-span-3 pl-4">Repository</div>
+                    <div className="col-span-2">Language</div>
+                    <div className="col-span-2">Commits</div>
+                    <div className="col-span-2">Last Active</div>
+                    <div className="col-span-3">Skills Detected</div>
+                  </div>
+                  {githubMetrics.analyzedRepos?.length > 0 ? (
+                    githubMetrics.analyzedRepos.map((repo: any, i: number) => {
+                      // Find skills mapped to this repo
+                      const mappedSkills = semanticMatches
+                        .filter((m: any) => m.matchedRepo === repo.name || m.matchedRepo?.includes(repo.name))
+                        .map((m: any) => m.claimedSkill);
+                      
+                      return (
+                        <RepoRow 
+                          key={i} 
+                          repoName={repo.name} 
+                          language={repo.language || "Unknown"} 
+                          commits={repo.commits} 
+                          date="Recently" 
+                          skills={mappedSkills.length > 0 ? mappedSkills : []} 
+                          sparklineData={[]} 
+                          recentCommits={repo.recentCommits} 
+                        />
+                      );
+                    })
+                  ) : (
+                    <div className="p-8 text-center text-[var(--text-secondary)] text-sm">No repositories were analyzed for this candidate.</div>
+                  )}
                 </div>
               </div>
             )}
@@ -357,6 +490,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
                       title={analysis.title || "Certificate"} 
                       issuer={analysis.issuer || "Unknown Issuer"} 
                       isSuspicious={analysis.trustScore < 70} 
+                      score={analysis.trustScore}
                       metadata={{
                         ...analysis.metadata,
                         "SHA-256 Checksum": analysis.sha256,
@@ -372,9 +506,6 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
               </div>
             )}
 
-            {activeTab === 'interview' && (
-              <div className="text-center py-10 text-[var(--text-secondary)]">Interview module disabled in this demo environment.</div>
-            )}
           </motion.div>
         </AnimatePresence>
       </main>
