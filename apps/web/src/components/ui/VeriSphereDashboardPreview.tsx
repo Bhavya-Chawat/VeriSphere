@@ -220,8 +220,21 @@ export function VeriSphereDashboardPreview() {
   const [liveData, setLiveData] = useState<{name: string, initials: string, score: number, skills: string[], commits: number} | null>(null);
 
   useEffect(() => {
-    fetch('/api/verification/dashboard')
-      .then(res => res.json())
+    const key = typeof window !== "undefined" ? localStorage.getItem("verisphere_api_key") : null;
+    if (!key) {
+      // No API key, keep default preview/mock data
+      return;
+    }
+
+    fetch("http://localhost:4000/api/verification/dashboard", {
+      headers: { "x-api-key": key }
+    })
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
       .then(data => {
         if (data && data.length > 0) {
           const job = data[0];
@@ -230,7 +243,7 @@ export function VeriSphereDashboardPreview() {
           try {
              if (job.report?.semanticMatchJson) {
                 const parsed = JSON.parse(job.report.semanticMatchJson);
-                skills = parsed.map((m: any) => m.skill).slice(0, 5);
+                skills = parsed.map((m: any) => m.claimedSkill || m.skill).filter(Boolean).slice(0, 5);
              }
           } catch(e) {}
           let commits = 2847;
