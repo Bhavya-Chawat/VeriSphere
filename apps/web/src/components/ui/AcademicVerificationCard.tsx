@@ -180,16 +180,16 @@ export function AcademicVerificationCard({ data }: { data: AcademicVerificationD
                 }
               />
               <VerificationLayer
-                label="Layer 3: Timeline Check"
-                status={acad.riskFlags.some(f => f.includes("timeline") || f.includes("Graduation") || f.includes("enrollment")) ? "fail" : "pass"}
-                detail={acad.riskFlags.find(f => f.includes("timeline") || f.includes("Graduation") || f.includes("enrollment"))
-                  || `Graduation timeline (${acad.graduationTimeline}) appears plausible`
+                label="Layer 3: CGPA/GPA Requirement"
+                status={acad.riskFlags.some(f => f.includes("CGPA") || f.includes("GPA") || f.includes("score")) ? "fail" : "pass"}
+                detail={acad.riskFlags.find(f => f.includes("CGPA") || f.includes("GPA") || f.includes("score"))
+                  || "CGPA/GPA meets the minimum requirement"
                 }
               />
               <VerificationLayer
                 label="Layer 4: Degree Consistency"
-                status={acad.riskFlags.some(f => f.includes("CGPA") || f.includes("score")) ? "fail" : "pass"}
-                detail={acad.riskFlags.find(f => f.includes("CGPA") || f.includes("score"))
+                status={acad.riskFlags.some(f => f.includes("degree") || f.includes("major")) ? "fail" : "pass"}
+                detail={acad.riskFlags.find(f => f.includes("degree") || f.includes("major"))
                   || "No inconsistencies detected in degree data"
                 }
               />

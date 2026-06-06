@@ -98,27 +98,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-[var(--bg-page)]">
 
-      {/* Top Nav */}
-      <div className="bg-[var(--bg-surface)] border-b border-[var(--border)] sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[var(--brand-blue)] rounded-lg flex items-center justify-center">
-              <ShieldCheck size={16} className="text-white" />
-            </div>
-            <span className="font-bold text-[var(--text-primary)] text-lg">VeriSphere</span>
-            <span className="text-[var(--text-tertiary)]">/</span>
-            <span className="text-[var(--text-secondary)] text-sm">Dashboard</span>
-          </div>
-          <Link href="/verify">
-            <motion.button
-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-2 px-4 py-2 bg-[var(--brand-blue)] text-white rounded-xl text-sm font-semibold shadow-sm hover:bg-blue-700 transition-colors"
-            >
-              <Plus size={16} /> New Verification
-            </motion.button>
-          </Link>
-        </div>
-      </div>
+
 
       <div className="max-w-7xl mx-auto px-6 py-10">
 

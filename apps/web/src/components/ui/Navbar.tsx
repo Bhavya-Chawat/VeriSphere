@@ -60,8 +60,8 @@ export function Navbar() {
           </motion.div>
           <div className="flex flex-col">
             <div className="flex items-baseline leading-none">
-              <span className="font-heading italic text-2xl text-[var(--brand-navy)] font-normal group-hover:text-[var(--brand-blue)] transition-colors duration-300">Veri</span>
-              <span className="font-heading font-semibold text-xl text-[var(--brand-navy)] tracking-tight group-hover:text-[var(--brand-blue)] transition-colors duration-300">Sphere</span>
+              <span className="font-heading italic text-2xl text-[var(--brand-navy)] font-normal group-hover:text-[var(--brand-blue)] transition-colors duration-300 pr-[2px]">Veri</span>
+              <span className="font-heading font-semibold text-2xl text-[var(--brand-navy)] tracking-tight group-hover:text-[var(--brand-blue)] transition-colors duration-300">Sphere</span>
             </div>
             <span className="text-[11px] font-heading font-medium text-[var(--text-tertiary)] mt-1 tracking-wide uppercase">
               Candidate Verification Intelligence

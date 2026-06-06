@@ -210,21 +210,7 @@ export default function VerifyPage() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-subtle)]">
-      {/* Top Nav */}
-      <div className="bg-[var(--bg-surface)] border-b border-[var(--border)]">
-        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-7 h-7 bg-[var(--brand-blue)] rounded-lg flex items-center justify-center">
-              <ShieldCheck size={14} className="text-white" />
-            </div>
-            <span className="font-bold text-[var(--text-primary)]">VeriSphere</span>
-            <span className="text-[var(--text-tertiary)]">/</span>
-            <a href="/dashboard" className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">Dashboard</a>
-            <span className="text-[var(--text-tertiary)]">/</span>
-            <span className="text-sm text-[var(--text-primary)]">New Verification</span>
-          </div>
-        </div>
-      </div>
+
       <div className="max-w-2xl mx-auto py-12 px-6">
         
         {/* Breadcrumb Steps */}
