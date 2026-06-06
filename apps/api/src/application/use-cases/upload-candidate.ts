@@ -42,8 +42,8 @@ export class UploadCandidateUseCase {
       throw new ValidationError("Invalid candidate GitHub profile URL.");
     }
 
-    if (!request.resumeFileUrl) {
-      throw new ValidationError("Candidate resume PDF URL is required.");
+    if (!request.resumeFileUrl && !(request as any).resumeBuffer) {
+      throw new ValidationError("Candidate resume PDF is required.");
     }
 
     // 2. Save candidate
@@ -59,7 +59,7 @@ export class UploadCandidateUseCase {
     const job = await this.jobRepo.create(candidate.id);
 
     // 4. Trigger asynchronous engine pipeline (non-blocking)
-    await this.orchestrator.triggerVerification(job.id, candidate.id, request.resumeFileUrl, (request as any).certificateAnalyses);
+    await this.orchestrator.triggerVerification(job.id, candidate.id, request.resumeFileUrl, (request as any).certificateAnalyses, (request as any).resumeBuffer);
 
     return {
       success: true,

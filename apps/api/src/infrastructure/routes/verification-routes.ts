@@ -21,17 +21,9 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Configure multer for PDF uploads
+// Configure multer for PDF uploads (in memory)
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => {
-      cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      cb(null, file.fieldname + '-' + uniqueSuffix + '.pdf');
-    }
-  })
+  storage: multer.memoryStorage()
 });
 
 const prisma = new PrismaClient();
@@ -67,7 +59,8 @@ export function createVerificationRouter(
       const candidateData = {
         ...req.body,
         githubUrl,
-        resumeFileUrl: req.file ? req.file.path : undefined,
+        resumeFileUrl: "", // Deprecated: using memory buffer instead
+        resumeBuffer: req.file ? req.file.buffer : undefined,
         certificateUrls: [],
         certificateAnalyses
       };

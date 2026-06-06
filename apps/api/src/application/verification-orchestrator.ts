@@ -165,7 +165,8 @@ export class VerificationOrchestrator {
     jobId: string, 
     candidateId: string, 
     resumeFileUrl?: string,
-    certificateAnalyses?: any[]
+    certificateAnalyses?: any[],
+    resumeBuffer?: Buffer
   ): Promise<void> {
     (async () => {
       try {
@@ -197,7 +198,11 @@ export class VerificationOrchestrator {
         // --- STEP 1: Parse Resume PDF ---
         let rawText = `${candidateRecord.firstName} ${candidateRecord.lastName} - Candidate Profile.`;
         
-        if (resumeFileUrl && fs.existsSync(resumeFileUrl)) {
+        if (resumeBuffer) {
+          console.log(`[Orchestrator] STEP 1: Parsing uploaded PDF resume from memory buffer.`);
+          const parsedPdf = await parsePdfBuffer(resumeBuffer);
+          rawText = parsedPdf.rawText;
+        } else if (resumeFileUrl && fs.existsSync(resumeFileUrl)) {
           console.log(`[Orchestrator] STEP 1: Parsing uploaded PDF resume: ${resumeFileUrl}`);
           const pdfBuffer = fs.readFileSync(resumeFileUrl);
           const parsedPdf = await parsePdfBuffer(pdfBuffer);

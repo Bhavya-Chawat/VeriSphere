@@ -41,16 +41,22 @@ export function RepoRow({ repoName, language, commits, date, skills, sparklineDa
           <div className="col-span-2 text-xs text-[var(--text-secondary)]">
             {date}
           </div>
-          <div className="col-span-3 flex gap-1.5 flex-wrap">
-            {skills?.slice(0, 3).map((s: string, i: number) => (
-              <span key={i} className="inline-flex items-center rounded-md border border-[var(--border)] bg-[var(--bg-page)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-secondary)]">
-                {s}
-              </span>
-            ))}
-            {skills?.length > 3 && (
-              <span className="inline-flex items-center rounded-md border border-[var(--border)] bg-[var(--bg-page)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-tertiary)]">
-                +{skills.length - 3}
-              </span>
+          <div className="col-span-3 flex gap-1.5 flex-wrap items-center">
+            {(!skills || skills.length === 0) ? (
+              <span className="text-xs text-[var(--text-tertiary)] italic">No Specific Skill Detected</span>
+            ) : (
+              <>
+                {skills.slice(0, 3).map((s: string, i: number) => (
+                  <span key={i} className="inline-flex items-center rounded-md border border-[var(--border)] bg-[var(--bg-page)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-secondary)]">
+                    {s}
+                  </span>
+                ))}
+                {skills.length > 3 && (
+                  <span className="inline-flex items-center rounded-md border border-[var(--border)] bg-[var(--bg-page)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-tertiary)]">
+                    +{skills.length - 3}
+                  </span>
+                )}
+              </>
             )}
           </div>
         </div>
