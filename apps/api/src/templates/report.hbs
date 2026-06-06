@@ -40,148 +40,107 @@
         h3 { font-size: 11pt; color: #374151; font-weight: 600; margin-top: 16px; margin-bottom: 8px; }
         p { margin-top: 0; margin-bottom: 12px; color: #4B5563; }
         
-        .cover { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
-        .cover h1 { font-size: 32pt; border: none; margin-bottom: 10px; }
-        .cover h2 { font-size: 18pt; color: #4B5563; font-weight: 400; }
-        .score-box { background: #F3F4F6; border-radius: 12px; padding: 30px; margin-top: 40px; border: 1px solid #E5E7EB; }
+        .score-box { background: #F3F4F6; border-radius: 12px; padding: 30px; text-align: center; border: 1px solid #E5E7EB; margin-bottom: 30px; }
         .score-value { font-size: 48pt; font-weight: 700; color: #2563EB; line-height: 1; }
         .score-label { font-size: 12pt; color: #6B7280; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-top: 8px; }
         
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 9pt; }
-        th { background: #F9FAFB; text-align: left; padding: 10px; border-bottom: 2px solid #E5E7EB; color: #374151; font-weight: 600; text-transform: uppercase; font-size: 8pt; }
-        td { padding: 10px; border-bottom: 1px solid #E5E7EB; color: #4B5563; vertical-align: top; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10pt; }
+        th { background: #F9FAFB; text-align: left; padding: 12px; border-bottom: 2px solid #E5E7EB; color: #374151; font-weight: 600; }
+        td { padding: 12px; border-bottom: 1px solid #E5E7EB; color: #4B5563; }
         
         .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 8pt; font-weight: 600; text-transform: uppercase; }
-        .badge-green { background: #DEF7EC; color: #03543F; border: 1px solid #84E1BC; }
         .badge-red { background: #FDE8E8; color: #9B1C1C; border: 1px solid #F8B4B4; }
-        .badge-yellow { background: #FEF08A; color: #713F12; border: 1px solid #FDE047; }
-        .badge-blue { background: #E1EFFE; color: #1E429F; border: 1px solid #A4CAFE; }
-        .badge-gray { background: #F3F4F6; color: #374151; border: 1px solid #D1D5DB; }
         
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .card { background: #F9FAFB; border: 1px solid #E5E7EB; padding: 16px; border-radius: 8px; margin-bottom: 16px; }
-        .mono { font-family: 'Roboto Mono', monospace; font-size: 8.5pt; }
-        .footer { position: absolute; bottom: 40px; left: 40px; right: 40px; border-top: 1px solid #E5E7EB; padding-top: 10px; font-size: 8pt; color: #9CA3AF; display: flex; justify-content: space-between; }
+        .card { background: #F9FAFB; border: 1px solid #E5E7EB; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
         
+        .resume-container {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 9pt;
+            background: #F9FAFB;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #E5E7EB;
+            white-space: pre-wrap;
+        }
+
+        .footer { position: absolute; bottom: 40px; left: 40px; right: 40px; border-top: 1px solid #E5E7EB; padding-top: 10px; font-size: 8pt; color: #9CA3AF; display: flex; justify-content: space-between; }
         .avoid-break { page-break-inside: avoid; }
     </style>
 </head>
 <body>
 
-    <!-- Cover Page -->
-    <div class="page cover">
-        <div class="logo" style="font-size: 40pt; margin-bottom: 20px;">VeriSphere</div>
-        <div style="font-size: 14pt; color: #6B7280; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; margin-bottom: 60px;">Verification Audit Report</div>
-        
-        <h1>{{candidateName}}</h1>
-        <h2>Candidate Technical Due Diligence</h2>
-        
-        <div class="score-box">
-            <div class="score-value">{{trustScore}}</div>
-            <div class="score-label">Verified Trust Score</div>
-        </div>
-        
-        <div style="margin-top: 60px; text-align: left; background: #F9FAFB; padding: 20px; border-radius: 8px; border: 1px solid #E5E7EB; min-width: 400px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                <span style="color: #6B7280; font-weight: 600;">Report ID</span>
-                <span class="mono">{{jobId}}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                <span style="color: #6B7280; font-weight: 600;">Generated</span>
-                <span class="mono">{{timestamp}}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between;">
-                <span style="color: #6B7280; font-weight: 600;">Status</span>
-                <span class="badge badge-green">COMPLETED</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Page 2: Executive Summary & Candidate Profile -->
+    <!-- Page 1: Verification Summary -->
     <div class="page">
         <div class="header">
             <div class="logo">VeriSphere</div>
             <div class="report-meta">Report ID: {{jobId}}<br>{{timestamp}}</div>
         </div>
         
-        <h1>1. Executive Summary</h1>
-        <p>{{findingsSummary}}</p>
+        <h1>1. Verification Summary</h1>
         
-        <div class="grid-2" style="margin-top: 30px;">
+        <div class="score-box">
+            <div class="score-value">{{trustScore}}</div>
+            <div class="score-label">Verified Trust Score</div>
+        </div>
+        
+        <div class="grid-2">
             <div class="card">
-                <h3>Trust Score Breakdown</h3>
+                <h3>Candidate Information</h3>
                 <table style="margin-bottom: 0;">
-                    <tr><td style="padding: 6px 0; border: none;">Academic Match</td><td style="padding: 6px 0; border: none; text-align: right; font-weight: 600;">{{scores.academicScore}} / 100</td></tr>
-                    <tr><td style="padding: 6px 0; border: none;">Resume Consistency</td><td style="padding: 6px 0; border: none; text-align: right; font-weight: 600;">{{scores.resumeConsistency}} / 100</td></tr>
-                    <tr><td style="padding: 6px 0; border: none;">GitHub Evidence</td><td style="padding: 6px 0; border: none; text-align: right; font-weight: 600;">{{scores.githubEvidence}} / 100</td></tr>
-                    <tr><td style="padding: 6px 0; border: none;">Certificate Validity</td><td style="padding: 6px 0; border: none; text-align: right; font-weight: 600;">{{scores.certificateValidity}} / 100</td></tr>
-                    <tr><td style="padding: 6px 0; border: none;">Contribution Confidence</td><td style="padding: 6px 0; border: none; text-align: right; font-weight: 600;">{{scores.contributionConfidence}} / 100</td></tr>
+                    <tr><td style="border: none; padding: 6px 0; font-weight: 600;">Name</td><td style="border: none; padding: 6px 0; text-align: right;">{{candidateName}}</td></tr>
+                    <tr><td style="border: none; padding: 6px 0; font-weight: 600;">Email</td><td style="border: none; padding: 6px 0; text-align: right;">{{candidateEmail}}</td></tr>
+                    <tr><td style="border: none; padding: 6px 0; font-weight: 600;">GitHub</td><td style="border: none; padding: 6px 0; text-align: right;"><a href="{{githubUrl}}" style="color: #2563EB; text-decoration: none;">{{githubUsername}}</a></td></tr>
                 </table>
             </div>
-            
+
             <div class="card">
-                <h3>Candidate Profile</h3>
-                <p><strong>Name:</strong> {{candidateName}}</p>
-                <p><strong>Email:</strong> {{candidateEmail}}</p>
-                <p><strong>GitHub:</strong> <a href="{{githubUrl}}" style="color: #2563EB;">{{githubUsername}}</a></p>
-                <p><strong>Repositories Scanned:</strong> {{publicReposCount}}</p>
-                <p><strong>Total Commits:</strong> {{totalCommits}}</p>
+                <h3>Skill Verification</h3>
+                <table style="margin-bottom: 0;">
+                    <tr><td style="border: none; padding: 6px 0; font-weight: 600;">Total Claimed Skills</td><td style="border: none; padding: 6px 0; text-align: right; font-weight: bold;">{{aiReport.resumeVerificationDashboard.claimedSkillsCount}}</td></tr>
+                    <tr><td style="border: none; padding: 6px 0; font-weight: 600; color: #03543F;">Verified Skills</td><td style="border: none; padding: 6px 0; text-align: right; font-weight: bold; color: #03543F;">{{aiReport.resumeVerificationDashboard.verifiedSkillsCount}}</td></tr>
+                    <tr><td style="border: none; padding: 6px 0; font-weight: 600; color: #9B1C1C;">Unverified Skills</td><td style="border: none; padding: 6px 0; text-align: right; font-weight: bold; color: #9B1C1C;">{{aiReport.resumeVerificationDashboard.unverifiedSkillsCount}}</td></tr>
+                </table>
             </div>
         </div>
 
-        {{#if hasAcademicVerification}}
-        <h2 style="margin-top: 40px;">1.5 Academic Profile</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 30%;">Claimed Institution</th>
-                    <th style="width: 25%;">Degree</th>
-                    <th style="width: 15%;">Confidence</th>
-                    <th style="width: 30%;">Notes / Domain Match</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{#each academicVerification}}
-                <tr class="avoid-break">
-                    <td style="font-weight: 600;">{{claimedInstitution}}</td>
-                    <td>{{degree}}</td>
-                    <td>
-                        {{#if domainMatch}}
-                            <span class="badge badge-green">100% (Domain Match)</span>
-                        {{else}}
-                            {{#if institutionVerified}}
-                                <span class="badge badge-yellow">50% (Name Match)</span>
-                            {{else}}
-                                <span class="badge badge-red">UNVERIFIED</span>
-                            {{/if}}
-                        {{/if}}
-                    </td>
-                    <td style="font-size: 8.5pt;">
-                        {{#each riskFlags}}
-                            <div>- {{this}}</div>
-                        {{/each}}
-                    </td>
-                </tr>
-                {{/each}}
-            </tbody>
-        </table>
-        {{/if}}
+        <div class="grid-2">
+            <div class="card">
+                <h3>GitHub Intelligence</h3>
+                <table style="margin-bottom: 0;">
+                    <tr><td style="border: none; padding: 6px 0; font-weight: 600;">Repos Analyzed</td><td style="border: none; padding: 6px 0; text-align: right;">{{aiReport.githubVerificationDashboard.repositoryCount}}</td></tr>
+                    <tr><td style="border: none; padding: 6px 0; font-weight: 600;">Ownership Score</td><td style="border: none; padding: 6px 0; text-align: right;">{{aiReport.githubVerificationDashboard.ownershipScore}} / 100</td></tr>
+                    <tr><td style="border: none; padding: 6px 0; font-weight: 600;">Activity Score</td><td style="border: none; padding: 6px 0; text-align: right;">{{aiReport.githubVerificationDashboard.activityScore}} / 100</td></tr>
+                </table>
+            </div>
 
-        <h2 style="margin-top: 40px;">2. Risk Assessment</h2>
-        {{#if hasRisks}}
-            {{#each risks}}
-            <div class="card avoid-break" style="border-left: 4px solid #F8B4B4;">
-                <h3 style="margin-top: 0; color: #9B1C1C; display: flex; align-items: center; gap: 8px;">
-                    <span class="badge badge-red">{{level}} RISK</span> {{type}}
-                </h3>
-                <p style="margin-bottom: 0;">{{description}}</p>
+            <div class="card">
+                <h3>Certificate Status</h3>
+                <div style="font-size: 18pt; font-weight: bold; text-align: center; margin-top: 15px; color: #1F2937;">
+                    {{aiReport.githubVerificationDashboard.certificateStatus}}
+                </div>
             </div>
-            {{/each}}
-        {{else}}
-            <div class="card" style="border-left: 4px solid #84E1BC;">
-                <p style="margin-bottom: 0;">No significant risks or anomalies were detected during the verification process. The candidate's evidence matches their profile claims securely.</p>
-            </div>
-        {{/if}}
+        </div>
+        
+        <div class="footer">
+            <span>VeriSphere Audit Report - {{candidateName}}</span>
+            <span>Page 1</span>
+        </div>
+    </div>
+
+    <!-- Page 2: Verified Resume -->
+    <div class="page">
+        <div class="header">
+            <div class="logo">VeriSphere</div>
+            <div class="report-meta">Report ID: {{jobId}}<br>{{timestamp}}</div>
+        </div>
+        
+        <h1>2. Verified Resume</h1>
+        <p>The original resume layout has been preserved. Claims that could not be verified by technical evidence are highlighted.</p>
+        
+        <div class="resume-container">
+            {{{highlightedResume}}}
+        </div>
         
         <div class="footer">
             <span>VeriSphere Audit Report - {{candidateName}}</span>
@@ -189,174 +148,55 @@
         </div>
     </div>
 
-    <!-- Page 3: Skills & Evidence -->
+    <!-- Page 3: AI Verification Report -->
     <div class="page">
         <div class="header">
             <div class="logo">VeriSphere</div>
             <div class="report-meta">Report ID: {{jobId}}<br>{{timestamp}}</div>
         </div>
         
-        <h1>3. Skill Verification & Evidence Trail</h1>
+        <h1>3. AI Verification Report</h1>
         
-        <h2>Verified Claims</h2>
-        <p>The following skills claimed on the resume were successfully verified through forensic analysis of public repositories and commits.</p>
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 20%;">Claimed Skill</th>
-                    <th style="width: 30%;">Primary Evidence Source</th>
-                    <th style="width: 15%;">Confidence</th>
-                    <th style="width: 35%;">Analysis Notes</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{#each verifiedSkills}}
-                <tr class="avoid-break">
-                    <td style="font-weight: 600;">{{claimedSkill}}</td>
-                    <td><span class="mono">{{matchedRepo}}</span></td>
-                    <td>
-                        {{#if isHighConfidence}}
-                            <span class="badge badge-green">{{confidencePercent}}%</span>
-                        {{else}}
-                            <span class="badge badge-yellow">{{confidencePercent}}%</span>
-                        {{/if}}
-                    </td>
-                    <td style="font-size: 8.5pt;">{{notes}}</td>
-                </tr>
-                {{/each}}
-            </tbody>
-        </table>
+        <div class="card avoid-break">
+            <h2 style="margin-top: 0;">Executive Summary</h2>
+            <p style="white-space: pre-wrap;">{{aiReport.executiveSummary}}</p>
+        </div>
 
-        {{#if hasUnsupportedClaims}}
-        <h2 style="margin-top: 40px; color: #9B1C1C;">Unsupported or Unverified Claims</h2>
-        <p>The following claims could not be substantiated by the collected evidence. This does not necessarily mean the claims are false, but indicates an evidence gap.</p>
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 40%;">Resume Claim</th>
-                    <th style="width: 60%;">Evidence Gap & Reason</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{#each unsupportedClaims}}
-                <tr class="avoid-break">
-                    <td style="font-weight: 600;">{{claim}}</td>
-                    <td style="color: #7F1D1D; font-size: 8.5pt;">{{reason}}</td>
-                </tr>
+        <div class="card avoid-break">
+            <h2 style="margin-top: 0;">GitHub Analysis Summary</h2>
+            <p style="white-space: pre-wrap;">{{aiReport.githubAnalysisSummary}}</p>
+        </div>
+
+        <div class="card avoid-break">
+            <h2 style="margin-top: 0; color: #9B1C1C;">Risk Indicators</h2>
+            {{#if aiReport.riskIndicators}}
+                <ul style="margin: 0; padding-left: 20px; color: #4B5563;">
+                {{#each aiReport.riskIndicators}}
+                    <li style="margin-bottom: 5px;">{{this}}</li>
                 {{/each}}
-            </tbody>
-        </table>
-        {{/if}}
+                </ul>
+            {{else}}
+                <p>No significant risks detected.</p>
+            {{/if}}
+        </div>
+
+        <div class="card avoid-break">
+            <h2 style="margin-top: 0;">Certificate Verification Dashboard</h2>
+            {{#if aiReport.certificateVerificationDashboard}}
+                <p style="white-space: pre-wrap;">{{aiReport.certificateVerificationDashboard}}</p>
+            {{else}}
+                <p style="font-style: italic; color: #6B7280;">No certificates were provided for forensic analysis during this verification job.</p>
+            {{/if}}
+        </div>
+
+        <div class="card avoid-break" style="border-left: 4px solid #2563EB;">
+            <h2 style="margin-top: 0; color: #1B3A6B;">Final Hiring Recommendation</h2>
+            <p style="font-weight: 500; font-size: 12pt; white-space: pre-wrap;">{{aiReport.finalHiringRecommendation}}</p>
+        </div>
         
         <div class="footer">
             <span>VeriSphere Audit Report - {{candidateName}}</span>
             <span>Page 3</span>
-        </div>
-    </div>
-
-    <!-- Page 4: GitHub Intelligence & Certificates -->
-    <div class="page">
-        <div class="header">
-            <div class="logo">VeriSphere</div>
-            <div class="report-meta">Report ID: {{jobId}}<br>{{timestamp}}</div>
-        </div>
-        
-        <h1>4. GitHub Intelligence</h1>
-        <p>Comprehensive breakdown of public repository activity, languages, and ownership.</p>
-        
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 30%;">Repository</th>
-                    <th style="width: 20%;">Primary Language</th>
-                    <th style="width: 15%;">Commits</th>
-                    <th style="width: 35%;">Recent Evidence</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{#each analyzedRepos}}
-                <tr class="avoid-break">
-                    <td style="font-weight: 600; color: #2563EB;">{{name}}</td>
-                    <td><span class="badge badge-gray">{{language}}</span></td>
-                    <td class="mono">{{commits}}</td>
-                    <td>
-                        {{#if recentCommits}}
-                            <ul style="margin: 0; padding-left: 15px; font-size: 8pt; font-family: 'Roboto Mono', monospace; color: #6B7280;">
-                                {{#each recentCommits}}
-                                    <li>{{this}}</li>
-                                {{/each}}
-                            </ul>
-                        {{else}}
-                            <span style="font-style: italic; font-size: 8pt;">No recent commit messages available.</span>
-                        {{/if}}
-                    </td>
-                </tr>
-                {{/each}}
-            </tbody>
-        </table>
-
-        <h2 style="margin-top: 40px;">5. Certificate Forensics</h2>
-        {{#if hasCertificates}}
-            <p>Certificate validation results:</p>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Certificate ID</th>
-                        <th>Issuer</th>
-                        <th>Status</th>
-                        <th>Notes</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr class="avoid-break">
-                        <td class="mono">AWS-SA-10293</td>
-                        <td>AWS</td>
-                        <td><span class="badge badge-green">VALID</span></td>
-                        <td>Signature cryptographically verified.</td>
-                    </tr>
-                </tbody>
-            </table>
-        {{else}}
-            <div class="card" style="padding: 20px; text-align: center;">
-                <p style="margin: 0; font-style: italic;">No certificates were provided for forensic analysis during this verification job.</p>
-            </div>
-        {{/if}}
-        
-        <div class="footer">
-            <span>VeriSphere Audit Report - {{candidateName}}</span>
-            <span>Page 4</span>
-        </div>
-    </div>
-
-    <!-- Page 5: AI Interview Preparation -->
-    <div class="page">
-        <div class="header">
-            <div class="logo">VeriSphere</div>
-            <div class="report-meta">Report ID: {{jobId}}<br>{{timestamp}}</div>
-        </div>
-        
-        <h1>6. AI Interview Preparation</h1>
-        <p>The following technical and behavioral questions were dynamically generated based on the candidate's verified skills, resume claims, and identified evidence gaps. These questions are recommended for the next stage of the hiring process.</p>
-        
-        <div style="margin-top: 30px;">
-            {{#if interviewQuestions}}
-                {{#each interviewQuestions}}
-                <div class="card avoid-break" style="border-left: 4px solid #3B82F6;">
-                    <div class="badge badge-blue" style="margin-bottom: 8px;">{{category}}</div>
-                    <h3 style="margin-top: 0;">{{question}}</h3>
-                    <p style="font-size: 9pt; margin-bottom: 0;"><strong>Rationale:</strong> {{reason}}</p>
-                </div>
-                {{/each}}
-            {{else}}
-                <div class="card">
-                    <p style="margin: 0; font-style: italic;">No custom interview questions generated for this profile.</p>
-                </div>
-            {{/if}}
-        </div>
-        
-        <div class="footer">
-            <span>VeriSphere Audit Report - {{candidateName}}</span>
-            <span>Page 5</span>
         </div>
     </div>
 
