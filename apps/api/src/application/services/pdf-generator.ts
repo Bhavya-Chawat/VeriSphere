@@ -26,13 +26,17 @@ export class PdfGeneratorService {
     }
     if (job.githubMetricsJson) try { githubMetrics = JSON.parse(job.githubMetricsJson); } catch (e) {}
     if (job.resumeDataJson) try { resumeData = JSON.parse(job.resumeDataJson); } catch (e) {}
+    
+    let certificateData: any = {};
+    if (job.certificateDataJson) try { certificateData = JSON.parse(job.certificateDataJson); } catch (e) {}
 
     const aiLayer = new AILayer();
     const aiReport = await aiLayer.generateProfessionalReport({
       jobId: job.id,
       candidate: job.candidate,
       report: reportData,
-      githubMetrics
+      githubMetrics,
+      certificateData
     });
 
     let highlightedResume = resumeData.rawText || "No resume data available.";
@@ -41,13 +45,13 @@ export class PdfGeneratorService {
     // Highlight falsely claimed skills
     falselyClaimedSkills.forEach((skill: string) => {
       if (skill && skill.trim() !== '') {
-        const regex = new RegExp(`\\b(${skill.replace(/[.*+?^$\\{\\}()|[\\]\\\\]/g, '\\\\$&')})\\b`, 'gi');
+        const escapedSkill = skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(?<!\\w)(${escapedSkill})(?!\\w)`, 'gi');
         highlightedResume = highlightedResume.replace(regex, `<span style="color: #9B1C1C; font-weight: 600; background: #FDE8E8; padding: 0 4px; border-radius: 4px;">$1 <span class="badge badge-red" style="font-size: 7pt;">⚠ Unverified Skill</span></span>`);
       }
     });
 
-    // We'll map the raw text to lines to preserve some structure
-    highlightedResume = highlightedResume.split('\\n').map((line: string) => `<p style="margin: 0; min-height: 1.5em;">${line}</p>`).join('\\n');
+    // The resume text should be left as raw string to preserve its exact original formatting via CSS white-space: pre-wrap
 
     const data = {
       jobId: job.id,

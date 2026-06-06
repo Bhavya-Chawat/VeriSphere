@@ -55,8 +55,8 @@
         .card { background: #F9FAFB; border: 1px solid #E5E7EB; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
         
         .resume-container {
-            font-family: 'Inter', sans-serif;
-            font-size: 10pt;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 9pt;
             background: #F9FAFB;
             padding: 20px;
             border-radius: 8px;
@@ -159,12 +159,12 @@
         
         <div class="card avoid-break">
             <h2 style="margin-top: 0;">Executive Summary</h2>
-            <p>{{aiReport.executiveSummary}}</p>
+            <p style="white-space: pre-wrap;">{{aiReport.executiveSummary}}</p>
         </div>
 
         <div class="card avoid-break">
             <h2 style="margin-top: 0;">GitHub Analysis Summary</h2>
-            <p>{{aiReport.githubAnalysisSummary}}</p>
+            <p style="white-space: pre-wrap;">{{aiReport.githubAnalysisSummary}}</p>
         </div>
 
         <div class="card avoid-break">
@@ -182,12 +182,16 @@
 
         <div class="card avoid-break">
             <h2 style="margin-top: 0;">Certificate Verification Dashboard</h2>
-            <p>{{aiReport.certificateVerificationDashboard}}</p>
+            {{#if aiReport.certificateVerificationDashboard}}
+                <p style="white-space: pre-wrap;">{{aiReport.certificateVerificationDashboard}}</p>
+            {{else}}
+                <p style="font-style: italic; color: #6B7280;">No certificates were provided for forensic analysis during this verification job.</p>
+            {{/if}}
         </div>
 
         <div class="card avoid-break" style="border-left: 4px solid #2563EB;">
             <h2 style="margin-top: 0; color: #1B3A6B;">Final Hiring Recommendation</h2>
-            <p style="font-weight: 500; font-size: 12pt;">{{aiReport.finalHiringRecommendation}}</p>
+            <p style="font-weight: 500; font-size: 12pt; white-space: pre-wrap;">{{aiReport.finalHiringRecommendation}}</p>
         </div>
         
         <div class="footer">
