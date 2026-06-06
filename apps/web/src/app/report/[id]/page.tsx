@@ -77,6 +77,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [jobData, setJobData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   useEffect(() => {
     // Demo bypass
@@ -181,6 +182,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
       return;
     }
 
+    setIsGeneratingPDF(true);
     try {
       const res = await fetch(`http://localhost:4000/api/verification/jobs/${resolvedParams.id}/report/pdf`, {
         headers: { "x-api-key": apiKey || "" }
@@ -195,14 +197,41 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      toast.success("PDF downloaded successfully!");
     } catch (error) {
       console.error("Error downloading PDF:", error);
       toast.error("Failed to generate PDF report.");
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-[var(--bg-page)] pb-24">
+      <AnimatePresence>
+        {isGeneratingPDF && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[var(--bg-surface)] p-8 rounded-2xl shadow-2xl flex flex-col items-center max-w-sm w-full mx-4 border border-[var(--border)]"
+            >
+              <div className="w-12 h-12 border-4 border-[var(--brand-blue)] border-t-transparent rounded-full animate-spin mb-4"></div>
+              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">Generating Report</h3>
+              <p className="text-sm text-[var(--text-secondary)] text-center">
+                Please wait while we compile the forensic data into a secure PDF.
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Report Sub-Header */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
