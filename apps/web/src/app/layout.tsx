@@ -3,6 +3,7 @@ import { Rubik, Outfit } from "next/font/google";
 import { GeistMono } from 'geist/font/mono';
 import { Navbar } from "@/components/ui/Navbar";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const rubik = Rubik({
@@ -47,6 +48,7 @@ export default function RootLayout({
         <ThemeProvider>
           <Navbar />
           {children}
+          <Toaster richColors position="top-right" />
         </ThemeProvider>
       </body>
     </html>

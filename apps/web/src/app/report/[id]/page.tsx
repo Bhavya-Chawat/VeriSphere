@@ -16,6 +16,7 @@ import { AcademicVerificationCard } from "@/components/ui/AcademicVerificationCa
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
 import { staggerContainer, staggerItem, fadeInUp, viewportOnce, tabContent } from "@/lib/motion-variants";
+import { toast } from "sonner";
 
 const COLORS = ['#2563EB', '#3B82F6', '#60A5FA', '#93C5FD'];
 
@@ -25,6 +26,48 @@ const TABS = [
   { key: "github", label: "GitHub Intelligence" },
   { key: "certificates", label: "Certificates" },
 ];
+
+function SkeletonDashboard() {
+  return (
+    <div className="min-h-screen bg-[var(--bg-page)] pb-20 animate-pulse">
+      <div className="bg-[var(--bg-surface)] border-b border-[var(--border)] pt-8 pb-4 sticky top-[73px] z-30 shadow-sm">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="w-24 h-4 bg-[var(--bg-subtle)] rounded mb-8" />
+          <div className="flex items-start justify-between mb-8">
+            <div>
+              <div className="h-10 w-64 bg-[var(--bg-subtle)] rounded mb-3" />
+              <div className="h-5 w-40 bg-[var(--bg-subtle)] rounded" />
+            </div>
+            <div className="flex gap-3">
+              <div className="h-10 w-32 bg-[var(--bg-subtle)] rounded-lg" />
+              <div className="h-10 w-32 bg-[var(--bg-subtle)] rounded-lg" />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-10 w-32 bg-[var(--bg-subtle)] rounded-t-xl" />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-5xl mx-auto px-6 mt-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="col-span-2 space-y-6">
+            <div className="h-[280px] bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl shadow-sm" />
+            <div className="h-[400px] bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl shadow-sm" />
+          </div>
+          <div className="col-span-1 space-y-6">
+            <div className="h-[320px] bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl shadow-sm" />
+            <div className="h-[200px] bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl shadow-sm" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+import { demoJobData } from "@/lib/demo-data";
 
 export default function ReportPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -36,12 +79,25 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Demo bypass
+    if (resolvedParams.id === "demo") {
+      const toastId = toast.loading("Analyzing candidate data...");
+      setTimeout(() => {
+        setJobData(demoJobData);
+        setLoading(false);
+        toast.success("Analysis complete!", { id: toastId });
+      }, 1500);
+      return;
+    }
+
     const key = localStorage.getItem("verisphere_api_key");
     if (!key) {
       router.push("/login");
       return;
     }
     setApiKey(key);
+
+    const toastId = toast.loading("Analyzing candidate data...");
 
     fetch(`http://localhost:4000/api/verification/jobs/${resolvedParams.id}/status`, {
       headers: { "x-api-key": key }
@@ -50,15 +106,21 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
       .then(data => {
         setJobData(data);
         setLoading(false);
+        if (data && data.report) {
+          toast.success("Analysis complete!", { id: toastId });
+        } else {
+          toast.info("Report is still processing...", { id: toastId });
+        }
       })
       .catch(err => {
         console.error(err);
         setLoading(false);
+        toast.error("Failed to load report", { id: toastId });
       });
   }, [resolvedParams.id, router]);
 
   if (loading) {
-    return <div className="min-h-screen bg-[var(--bg-page)] flex items-center justify-center text-[var(--text-secondary)]">Loading report data...</div>;
+    return <SkeletonDashboard />;
   }
 
   if (!jobData || !jobData.report) {
@@ -114,6 +176,11 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
   })).sort((a,b) => b.value - a.value).slice(0,4);
 
   const handleDownloadPDF = async () => {
+    if (resolvedParams.id === "demo") {
+      toast.info("PDF Download is not available for the static demo profile.");
+      return;
+    }
+
     try {
       const res = await fetch(`http://localhost:4000/api/verification/jobs/${resolvedParams.id}/report/pdf`, {
         headers: { "x-api-key": apiKey || "" }
@@ -130,7 +197,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
       document.body.removeChild(a);
     } catch (error) {
       console.error("Error downloading PDF:", error);
-      alert("Failed to generate PDF report.");
+      toast.error("Failed to generate PDF report.");
     }
   };
 

@@ -154,7 +154,7 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section className="relative pt-24 pb-16 px-6 dot-pattern overflow-hidden">
-        {/* Animated Background Blob */}
+        {/* Animated Background Blobs */}
         <motion.div 
           animate={{ 
             scale: [1, 1.2, 1],
@@ -166,7 +166,20 @@ export default function LandingPage() {
             repeat: Infinity,
             ease: "linear"
           }}
-          className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[var(--brand-blue)] rounded-full blur-[100px] -z-10 pointer-events-none"
+          className="absolute top-1/4 left-1/2 -translate-x-[70%] w-[600px] h-[600px] bg-[var(--brand-blue)] rounded-full blur-[120px] -z-10 pointer-events-none"
+        />
+        <motion.div 
+          animate={{ 
+            scale: [1, 1.3, 1],
+            rotate: [0, -90, 0],
+            opacity: [0.08, 0.12, 0.08]
+          }}
+          transition={{
+            duration: 25,
+            repeat: Infinity,
+            ease: "linear"
+          }}
+          className="absolute top-1/3 left-1/2 translate-x-[10%] w-[500px] h-[500px] bg-purple-500 rounded-full blur-[120px] -z-10 pointer-events-none"
         />
 
         <motion.div 
@@ -191,7 +204,7 @@ export default function LandingPage() {
 
             <motion.div 
               variants={heroItemVariants}
-              className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto"
+              className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-lg mx-auto"
             >
               <Link 
                 href="/verify" 
@@ -199,9 +212,15 @@ export default function LandingPage() {
               >
                 Start Verifying
               </Link>
+              <Link 
+                href="/report/demo" 
+                className="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-medium px-8 py-4 rounded-xl hover:from-emerald-600 hover:to-teal-600 hover:shadow-[0_8px_30px_rgb(16,185,129,0.3)] transition-all hover:-translate-y-0.5 text-center text-sm whitespace-nowrap"
+              >
+                View Sample Report
+              </Link>
               <a 
                 href="#how-it-works" 
-                className="w-full sm:w-auto bg-[var(--bg-surface)] text-[var(--text-secondary)] border border-[var(--border)] font-medium px-8 py-4 rounded-xl hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)] transition-all text-center text-sm shadow-sm"
+                className="w-full sm:w-auto bg-[var(--bg-surface)] text-[var(--text-secondary)] border border-[var(--border)] font-medium px-6 py-4 rounded-xl hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)] transition-all text-center text-sm shadow-sm"
               >
                 Learn More
               </a>
