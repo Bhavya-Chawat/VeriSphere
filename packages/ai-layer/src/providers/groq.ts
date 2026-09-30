@@ -13,7 +13,7 @@ export class GroqAIProvider {
 
   public async analyzeCandidate(resumeText: string, githubMetrics: any, systemPrompt: string): Promise<Partial<AuditReport>> {
     console.log("[Groq AI] Sending analysis request to Groq...");
-    
+
     const userPrompt = `
       RESUME TEXT:
       ${resumeText}
@@ -48,7 +48,7 @@ export class GroqAIProvider {
 
   public async generateProfessionalReport(data: any): Promise<any> {
     console.log("[Groq AI] Generating professional verification report...");
-    
+
     const systemPrompt = `
 You are an expert technical recruiter and auditor. Your task is to generate a professional PDF verification report for a candidate based on the raw JSON data provided.
 The report must be concise, structured, and strictly recruiter-facing. Do not generate markdown tables, just structured JSON that will be injected into a Handlebars PDF template.

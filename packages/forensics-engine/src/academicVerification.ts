@@ -206,6 +206,22 @@ export function verifyAcademicProfile(
   // === LAYER 3: Graduation Timeline Plausibility ===
   const currentYear = new Date().getFullYear();
   
+  let isStudentIntakeMatch = false;
+  if (institutionalEmail) {
+    const emailLocalPart = institutionalEmail.split("@")[0]?.toLowerCase();
+    if (emailLocalPart) {
+      // Match patterns like .is24, .b24, _24, -24, is24, b24 at word boundaries
+      const matchYear = emailLocalPart.match(/(?:\.|_|-|is|b)(\d{2})(?:[a-zA-Z]|$)/);
+      if (matchYear && matchYear[1]) {
+        const intakeYear = 2000 + parseInt(matchYear[1], 10);
+        const expectedGraduationYear = intakeYear + 4; // Typical engineering program duration
+        if (profile.graduationYear && parseInt(profile.graduationYear, 10) === expectedGraduationYear) {
+          isStudentIntakeMatch = true;
+        }
+      }
+    }
+  }
+  
   if (profile.enrollmentYear && profile.graduationYear) {
     const start = parseInt(profile.enrollmentYear, 10);
     const end = parseInt(profile.graduationYear, 10);
@@ -225,7 +241,7 @@ export function verifyAcademicProfile(
       }
       
       // Check future graduation
-      if (end > currentYear + 1) {
+      if (end > currentYear + 1 && !isStudentIntakeMatch) {
         result.riskFlags.push(`Graduation year (${end}) is in the future`);
         result.confidenceScore = Math.max(0, result.confidenceScore - 0.2);
       }

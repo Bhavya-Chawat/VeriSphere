@@ -49,6 +49,12 @@ const PACKAGE_NAME_MAP: Record<string, string> = {
   trpc: "tRPC",
   "@trpc/server": "tRPC",
   zod: "Zod",
+  ethers: "Blockchain",
+  web3: "Blockchain",
+  solc: "Blockchain",
+  "@openzeppelin/contracts": "Blockchain",
+  hardhat: "Blockchain",
+  truffle: "Blockchain",
 };
 
 /** Config file name → technology label */
@@ -69,6 +75,13 @@ const FILE_TECH_MAP: Record<string, string> = {
   "go.mod": "Go",
   "pubspec.yaml": "Flutter",
   "flutter.yaml": "Flutter",
+  "hardhat.config.js": "Blockchain",
+  "hardhat.config.ts": "Blockchain",
+  "truffle-config.js": "Blockchain",
+  "truffle-config.ts": "Blockchain",
+  "foundry.toml": "Blockchain",
+  "anchor.toml": "Blockchain",
+  "brownie-config.yaml": "Blockchain",
 };
 
 interface PackageJson {
@@ -80,9 +93,22 @@ interface PackageJson {
 export async function detectTechnologies(
   username: string,
   repoName: string,
-  octokit: Octokit
+  octokit: Octokit,
+  primaryLanguage?: string
 ): Promise<string[]> {
   const techs = new Set<string>();
+
+  if (primaryLanguage) {
+    const langLower = primaryLanguage.toLowerCase();
+    if (langLower === "solidity") {
+      techs.add("Solidity");
+      techs.add("Blockchain");
+    } else if (langLower === "python") {
+      techs.add("Python");
+    } else if (langLower !== "unknown" && langLower !== "undefined") {
+      techs.add(primaryLanguage);
+    }
+  }
 
   try {
     // Fetch root directory contents in a single call to check for files
@@ -95,6 +121,17 @@ export async function detectTechnologies(
     const rootItems = response.data;
     if (Array.isArray(rootItems)) {
       const rootFiles = new Set(rootItems.map((item) => item.name));
+
+      // Scan root files for extensions indicating Python or Solidity
+      for (const fileName of rootFiles) {
+        if (fileName.endsWith(".sol")) {
+          techs.add("Solidity");
+          techs.add("Blockchain");
+        }
+        if (fileName.endsWith(".py")) {
+          techs.add("Python");
+        }
+      }
 
       // 1. Check for config files from the mapping table
       for (const [fileName, techName] of Object.entries(FILE_TECH_MAP)) {

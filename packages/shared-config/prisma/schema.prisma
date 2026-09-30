@@ -1,47 +1,48 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Candidate {
-  id        String   @id @default(uuid())
-  firstName String
-  lastName  String
-  email     String
-  githubUrl String?
-  jobs      VerificationJob[]
-  createdAt DateTime @default(now())
+  id                 String            @id @default(uuid())
+  firstName          String
+  lastName           String
+  email              String
+  institutionalEmail String?
+  githubUrl          String?
+  createdAt          DateTime          @default(now())
+  jobs               VerificationJob[]
 }
 
 model VerificationJob {
-  id                String       @id @default(uuid())
-  candidateId       String
-  candidate         Candidate    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  status            String       @default("QUEUED")
-  startedAt         DateTime     @default(now())
-  completedAt       DateTime?
-  errorMsg          String?
-  githubMetricsJson String?      // Stores raw GitHub engine output
-  resumeDataJson    String?      // Stores raw Forensics engine output
-  report            AuditReport?
-  createdAt         DateTime     @default(now())
+  id                  String       @id @default(uuid())
+  candidateId         String
+  status              String       @default("QUEUED")
+  startedAt           DateTime     @default(now())
+  completedAt         DateTime?
+  certificateDataJson String?
+  createdAt           DateTime     @default(now())
+  errorMsg            String?
+  githubMetricsJson   String?
+  resumeDataJson      String?
+  report              AuditReport?
+  candidate           Candidate    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
 }
 
 model AuditReport {
-  id                String          @id @default(uuid())
-  jobId             String          @unique
-  job               VerificationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  trustScore        Int             // 0-100 overall score
-  findingsSummary   String
-  semanticMatchJson String          // Stores the detailed matches
-  contradictions    String[]
-  riskIndicatorsJson String         // Stores risks as JSON instead of a separate table
-  createdAt         DateTime        @default(now())
+  id                       String          @id @default(uuid())
+  jobId                    String          @unique
+  findingsSummary          String
+  createdAt                DateTime        @default(now())
+  riskIndicatorsJson       String
+  semanticMatchJson        String
+  academicVerificationJson String?
+  contradictions           String[]
+  trustScore               Int
+  job                      VerificationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
 }

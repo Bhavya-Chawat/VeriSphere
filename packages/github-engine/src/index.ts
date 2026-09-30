@@ -163,7 +163,7 @@ export async function scrapeGithubEvidence(
       chunk.map(async (repo) => {
         const [technologies, contributorResult, activityMetrics] =
           await Promise.all([
-            detectTechnologies(username, repo.name, octokit),
+            detectTechnologies(username, repo.name, octokit, repo.language),
             analyzeContributors(username, repo.name, octokit),
             fetchCommitActivity(username, repo.name, octokit),
           ]);

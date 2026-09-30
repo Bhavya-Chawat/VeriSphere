@@ -36,7 +36,7 @@ export function checkMetadataRules(metadata: PdfMetadata): ForensicFinding[] {
 
   // Rule 2: Large modification gap
   // Trigger if modification date exceeds creation date by 30 days
-  if (metadata.creationDate && metadata.modificationDate) {
+  if (metadata.creationDate && metadata.modificationDate && !isNaN(metadata.creationDate.getTime()) && !isNaN(metadata.modificationDate.getTime())) {
     const diffTime = metadata.modificationDate.getTime() - metadata.creationDate.getTime();
     const diffDays = diffTime / (1000 * 60 * 60 * 24);
     if (diffDays > 30) {
@@ -65,7 +65,8 @@ export function checkMetadataRules(metadata: PdfMetadata): ForensicFinding[] {
   }
 
   // Rule 4: Creator Producer Mismatch
-  // Trigger if creator and producer come from different vendors
+  // Trigger if creator and producer come from different vendors, indicating post-processing or modification,
+  // but only if at least one of the vendors is a known edit-heavy or web utility tool.
   if (metadata.creator && metadata.producer) {
     const getVendor = (name: string): string => {
       const lower = name.toLowerCase();
@@ -83,8 +84,19 @@ export function checkMetadataRules(metadata: PdfMetadata): ForensicFinding[] {
     const creatorVendor = getVendor(metadata.creator);
     const producerVendor = getVendor(metadata.producer);
 
-    // Trigger mismatch if vendors are resolved and do not match
-    if (creatorVendor !== producerVendor) {
+    // List of editing, design, or web-based PDF modification tools
+    const suspiciousEditorVendors = [
+      "canva", "photoshop", "illustrator", "gimp", "nitro", "ilovepdf", "pdf2go",
+      "smallpdf", "pdfescape", "pdf editor", "foxit", "soda pdf", "pdfsam", "pdfill",
+      "inkscape", "coreldraw"
+    ];
+
+    const isSuspiciousMismatch = suspiciousEditorVendors.some(vendor => 
+      creatorVendor.toLowerCase().includes(vendor) || producerVendor.toLowerCase().includes(vendor)
+    );
+
+    // Trigger mismatch if vendors do not match AND at least one vendor is edit-heavy
+    if (creatorVendor !== producerVendor && isSuspiciousMismatch) {
       findings.push({
         category: "METADATA_MISMATCH",
         severity: Severity.MEDIUM,
