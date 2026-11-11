@@ -240,9 +240,9 @@ export function verifyAcademicProfile(
         result.confidenceScore = Math.max(0, result.confidenceScore - 0.1);
       }
       
-      // Check future graduation
-      if (end > currentYear + 1 && !isStudentIntakeMatch) {
-        result.riskFlags.push(`Graduation year (${end}) is in the future`);
+      // Check implausibly distant future graduation (allow normal student enrollment up to 5 years ahead)
+      if (end > currentYear + 5) {
+        result.riskFlags.push(`Graduation year (${end}) is implausibly far in the future`);
         result.confidenceScore = Math.max(0, result.confidenceScore - 0.2);
       }
       

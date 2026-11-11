@@ -41,6 +41,16 @@ const PACKAGE_NAME_MAP: Record<string, string> = {
   sequelize: "SQL",
   typeorm: "TypeORM",
   drizzle: "Drizzle ORM",
+  mongodb: "MongoDB",
+  "@supabase/supabase-js": "Supabase",
+  supabase: "Supabase",
+  firebase: "Firebase",
+  "firebase-admin": "Firebase",
+  pg: "PostgreSQL",
+  postgres: "PostgreSQL",
+  mysql: "MySQL",
+  mysql2: "MySQL",
+  sqlite3: "SQLite",
   jest: "Jest",
   vitest: "Vitest",
   webpack: "Webpack",
@@ -55,6 +65,38 @@ const PACKAGE_NAME_MAP: Record<string, string> = {
   "@openzeppelin/contracts": "Blockchain",
   hardhat: "Blockchain",
   truffle: "Blockchain",
+  "framer-motion": "Framer Motion",
+  axios: "Axios",
+};
+
+/** Python requirement name → human-readable technology label */
+const PYTHON_PACKAGE_MAP: Record<string, string> = {
+  flask: "Flask",
+  "flask-cors": "Flask",
+  django: "Django",
+  fastapi: "FastAPI",
+  torch: "PyTorch",
+  torchvision: "PyTorch",
+  tensorflow: "TensorFlow",
+  keras: "Keras",
+  timm: "Deep Learning",
+  numpy: "NumPy",
+  pandas: "Pandas",
+  scipy: "SciPy",
+  "scikit-learn": "Scikit-Learn",
+  sklearn: "Scikit-Learn",
+  opencv: "OpenCV",
+  "opencv-python": "OpenCV",
+  pillow: "Pillow / Image Processing",
+  gunicorn: "Gunicorn",
+  celery: "Celery",
+  pytest: "Pytest",
+  sqlalchemy: "SQLAlchemy",
+  pydantic: "Pydantic",
+  pymongo: "MongoDB",
+  supabase: "Supabase",
+  firebase_admin: "Firebase",
+  transformers: "Hugging Face / Transformers",
 };
 
 /** Config file name → technology label */
@@ -71,6 +113,8 @@ const FILE_TECH_MAP: Record<string, string> = {
   "requirements.txt": "Python",
   "pyproject.toml": "Python",
   "pom.xml": "Java / Spring",
+  "build.gradle": "Java / Gradle",
+  "build.gradle.kts": "Kotlin / Gradle",
   "Cargo.toml": "Rust",
   "go.mod": "Go",
   "pubspec.yaml": "Flutter",
@@ -82,12 +126,57 @@ const FILE_TECH_MAP: Record<string, string> = {
   "foundry.toml": "Blockchain",
   "anchor.toml": "Blockchain",
   "brownie-config.yaml": "Blockchain",
+  "Makefile": "Makefile",
+  "CMakeLists.txt": "C / C++",
 };
 
 interface PackageJson {
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   peerDependencies?: Record<string, string>;
+}
+
+function parsePackageJsonContent(content: string, techs: Set<string>) {
+  try {
+    const pkg = JSON.parse(content) as PackageJson;
+    const allDeps = {
+      ...pkg.dependencies,
+      ...pkg.devDependencies,
+      ...pkg.peerDependencies,
+    };
+
+    for (const pkgName of Object.keys(allDeps)) {
+      if (PACKAGE_NAME_MAP[pkgName]) {
+        techs.add(PACKAGE_NAME_MAP[pkgName]);
+        continue;
+      }
+      const prefix = pkgName.split("/")[0];
+      if (PACKAGE_NAME_MAP[prefix]) {
+        techs.add(PACKAGE_NAME_MAP[prefix]);
+      }
+    }
+  } catch {
+    // Ignore JSON parse errors
+  }
+}
+
+function parseRequirementsContent(content: string, techs: Set<string>) {
+  try {
+    const lines = content.split(/\r?\n/);
+    for (const line of lines) {
+      const cleanLine = line.trim().split("#")[0].trim();
+      if (!cleanLine) continue;
+      const match = cleanLine.match(/^([a-zA-Z0-9_\-]+)/);
+      if (match) {
+        const pkgName = match[1].toLowerCase();
+        if (PYTHON_PACKAGE_MAP[pkgName]) {
+          techs.add(PYTHON_PACKAGE_MAP[pkgName]);
+        }
+      }
+    }
+  } catch {
+    // Ignore parse errors
+  }
 }
 
 export async function detectTechnologies(
@@ -105,6 +194,12 @@ export async function detectTechnologies(
       techs.add("Blockchain");
     } else if (langLower === "python") {
       techs.add("Python");
+    } else if (langLower === "c") {
+      techs.add("C");
+    } else if (langLower === "c++" || langLower === "cpp") {
+      techs.add("C++");
+    } else if (langLower === "kotlin") {
+      techs.add("Kotlin");
     } else if (langLower !== "unknown" && langLower !== "undefined") {
       techs.add(primaryLanguage);
     }
@@ -121,15 +216,21 @@ export async function detectTechnologies(
     const rootItems = response.data;
     if (Array.isArray(rootItems)) {
       const rootFiles = new Set(rootItems.map((item) => item.name));
+      const subdirs = rootItems.filter((item) => item.type === "dir").map((item) => item.name);
 
-      // Scan root files for extensions indicating Python or Solidity
+      // Scan root files for extensions
       for (const fileName of rootFiles) {
         if (fileName.endsWith(".sol")) {
           techs.add("Solidity");
           techs.add("Blockchain");
-        }
-        if (fileName.endsWith(".py")) {
+        } else if (fileName.endsWith(".py")) {
           techs.add("Python");
+        } else if (fileName.endsWith(".c") || fileName.endsWith(".h")) {
+          techs.add("C");
+        } else if (fileName.endsWith(".cpp") || fileName.endsWith(".hpp")) {
+          techs.add("C++");
+        } else if (fileName.endsWith(".kt")) {
+          techs.add("Kotlin");
         }
       }
 
@@ -140,37 +241,73 @@ export async function detectTechnologies(
         }
       }
 
-      // 2. Check for package.json and parse it if it exists
+      // 2. Parse requirements.txt if present
+      if (rootFiles.has("requirements.txt")) {
+        try {
+          const reqRes = await octokit.rest.repos.getContent({
+            owner: username,
+            repo: repoName,
+            path: "requirements.txt",
+          });
+          const fileData = reqRes.data;
+          if (!Array.isArray(fileData) && fileData.type === "file") {
+            const decoded = Buffer.from(fileData.content, "base64").toString("utf-8");
+            parseRequirementsContent(decoded, techs);
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      // 3. Parse root package.json if it exists
       if (rootFiles.has("package.json")) {
-        const pkgResponse = await octokit.rest.repos.getContent({
-          owner: username,
-          repo: repoName,
-          path: "package.json",
-        });
+        try {
+          const pkgResponse = await octokit.rest.repos.getContent({
+            owner: username,
+            repo: repoName,
+            path: "package.json",
+          });
+          const fileData = pkgResponse.data;
+          if (!Array.isArray(fileData) && fileData.type === "file") {
+            const decoded = Buffer.from(fileData.content, "base64").toString("utf-8");
+            parsePackageJsonContent(decoded, techs);
+          }
+        } catch {
+          // ignore
+        }
+      }
 
-        const fileData = pkgResponse.data;
-        if (!Array.isArray(fileData) && fileData.type === "file") {
-          const decoded = Buffer.from(fileData.content, "base64").toString("utf-8");
+      // 4. Check subdirectories (frontend, client, web, backend, api) for package.json or requirements.txt
+      const targetSubdirs = ["frontend", "client", "web", "backend", "api", "server"];
+      for (const dir of subdirs) {
+        if (targetSubdirs.includes(dir.toLowerCase())) {
           try {
-            const pkg = JSON.parse(decoded) as PackageJson;
-            const allDeps = {
-              ...pkg.dependencies,
-              ...pkg.devDependencies,
-              ...pkg.peerDependencies,
-            };
-
-            for (const pkgName of Object.keys(allDeps)) {
-              if (PACKAGE_NAME_MAP[pkgName]) {
-                techs.add(PACKAGE_NAME_MAP[pkgName]);
-                continue;
-              }
-              const prefix = pkgName.split("/")[0];
-              if (PACKAGE_NAME_MAP[prefix]) {
-                techs.add(PACKAGE_NAME_MAP[prefix]);
-              }
+            const subPkg = await octokit.rest.repos.getContent({
+              owner: username,
+              repo: repoName,
+              path: `${dir}/package.json`,
+            });
+            const subData = subPkg.data;
+            if (!Array.isArray(subData) && subData.type === "file") {
+              const decoded = Buffer.from(subData.content, "base64").toString("utf-8");
+              parsePackageJsonContent(decoded, techs);
             }
           } catch {
-            // Ignore JSON parse errors
+            // sub package.json not found, try requirements.txt
+            try {
+              const subReq = await octokit.rest.repos.getContent({
+                owner: username,
+                repo: repoName,
+                path: `${dir}/requirements.txt`,
+              });
+              const subReqData = subReq.data;
+              if (!Array.isArray(subReqData) && subReqData.type === "file") {
+                const decoded = Buffer.from(subReqData.content, "base64").toString("utf-8");
+                parseRequirementsContent(decoded, techs);
+              }
+            } catch {
+              // ignore
+            }
           }
         }
       }

@@ -50,7 +50,7 @@ export function mapRelationalJobToLegacyShape(job: any): any {
       publicReposCount: gp.publicRepos,
       followersCount: gp.followers,
       followingCount: 0,
-      accountAgeMonths: 12,
+      accountAgeMonths: 24,
       totalCommitsCollected: repos.reduce((acc: number, r: any) => acc + (r.commitCount || 0), 0),
       analyzedRepos: repos.map((r: any) => ({
         name: r.name,

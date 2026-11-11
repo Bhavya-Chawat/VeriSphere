@@ -130,6 +130,8 @@ export interface GithubEvidenceReport {
   activityScore: number;
   /** List of detected timeline anomaly flags across all repos. */
   timelineFlags: TimelineFlag[];
+  /** Calculated account age in months. */
+  accountAgeMonths?: number;
   /** One entry per analyzed repository. */
   repoEvidence: RepoEvidence[];
 }

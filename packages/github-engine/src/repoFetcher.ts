@@ -112,13 +112,11 @@ export async function fetchLanguageDistribution(
     return {};
   }
 
-  // Convert bytes → integer percentages, filter < 5%
+  // Convert bytes → integer percentages (include all detected languages)
   const distribution: Record<string, number> = {};
   for (const [lang, bytes] of Object.entries(byteTotals)) {
-    const pct = Math.round((bytes / grandTotal) * 100);
-    if (pct >= 5) {
-      distribution[lang] = pct;
-    }
+    const pct = Math.max(1, Math.round((bytes / grandTotal) * 100));
+    distribution[lang] = pct;
   }
 
   return distribution;

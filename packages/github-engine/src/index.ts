@@ -136,6 +136,27 @@ export async function scrapeGithubEvidence(
     return buildEmptyReport(username);
   }
 
+  // --- Step 2b: Calculate true account age from GitHub user profile ---
+  let accountAgeMonths = 12;
+  try {
+    const userRes = await octokit.rest.users.getByUsername({ username });
+    if (userRes.data?.created_at) {
+      const createdDate = new Date(userRes.data.created_at);
+      const diffMs = Math.max(0, Date.now() - createdDate.getTime());
+      accountAgeMonths = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24 * 30.4375)));
+    }
+  } catch {
+    // If rate-limited or fails, derive from oldest repository
+    if (repositories.length > 0) {
+      const oldestTimestamp = repositories.reduce((oldest, r) => {
+        const d = new Date(r.createdAt).getTime();
+        return d > 0 && d < oldest ? d : oldest;
+      }, Date.now());
+      const diffMs = Math.max(0, Date.now() - oldestTimestamp);
+      accountAgeMonths = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24 * 30.4375)));
+    }
+  }
+
   // In unauthenticated mode (60 req/hr limit), deeply analyze top 6 non-fork recent repos
   // to avoid exhausting the hourly IP quota on the very first candidate, while still recording
   // metadata for all remaining repositories.
@@ -152,9 +173,20 @@ export async function scrapeGithubEvidence(
     octokit
   );
 
-  const verifiedLanguages = Object.entries(languageDistribution)
-    .sort((a, b) => b[1] - a[1]) // sort by percentage descending
-    .map(([lang]) => lang);
+  const verifiedLanguagesSet = new Set<string>(
+    Object.entries(languageDistribution)
+      .sort((a, b) => b[1] - a[1]) // sort by percentage descending
+      .map(([lang]) => lang)
+  );
+
+  // Also include all primary languages declared by repositories
+  for (const repo of repositories) {
+    if (repo.language && repo.language.toLowerCase() !== "unknown") {
+      verifiedLanguagesSet.add(repo.language);
+    }
+  }
+
+  const verifiedLanguages = Array.from(verifiedLanguagesSet);
 
   // --- Step 4: Per-repo analysis (parallel, fault-tolerant, batch-limited) ---
   const repoAnalysisResults: PromiseSettledResult<{
@@ -239,6 +271,10 @@ export async function scrapeGithubEvidence(
   // --- Step 5: Aggregate scores ---
   const ownershipScore = computeOwnershipScore(contributorResults);
   const activityScore = computeActivityScore(allActivityMetrics);
+  if (repositories.length > 0) {
+    allTechSets.add("Git");
+    allTechSets.add("GitHub");
+  }
   const verifiedSkills = Array.from(allTechSets).sort();
 
   // --- Step 6: Assemble report ---
@@ -251,6 +287,7 @@ export async function scrapeGithubEvidence(
     ownershipScore,
     activityScore,
     timelineFlags: allTimelineFlags,
+    accountAgeMonths,
     repoEvidence,
   };
 

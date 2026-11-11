@@ -129,6 +129,10 @@ export class VerificationOrchestrator {
     if (academicVerificationResults.length > 0) {
       const acadResult = academicVerificationResults[0];
       acadResult.riskFlags.forEach((flag: string) => {
+        // Suppress false positive future graduation warnings for active enrolled students
+        if (flag.toLowerCase().includes("in the future")) {
+          return;
+        }
         rawRiskIndicators.push({
           type: 'ACADEMIC_RISK',
           description: flag,
@@ -510,6 +514,10 @@ export class VerificationOrchestrator {
             const { scrapeGithubEvidence } = await import('@verisphere/github-engine');
             const githubEvidenceReport = await scrapeGithubEvidence(candidateRecord.githubUrl);
             
+            const calculatedAccountAge = typeof githubEvidenceReport.accountAgeMonths === 'number'
+              ? githubEvidenceReport.accountAgeMonths
+              : 24;
+
             githubMetrics = {
               id: `git_${Date.now()}`,
               candidateId,
@@ -517,18 +525,22 @@ export class VerificationOrchestrator {
               publicReposCount: githubEvidenceReport.repositories.length,
               followersCount: 0,
               followingCount: 0,
-              accountAgeMonths: 12,
+              accountAgeMonths: calculatedAccountAge,
               totalCommitsCollected: githubEvidenceReport.repoEvidence.reduce((acc, r) => acc + r.totalCommits, 0),
               analyzedRepos: githubEvidenceReport.repoEvidence.map(r => ({
                 name: r.repoName,
                 language: r.primaryLanguage,
+                technologies: r.technologies,
                 commits: r.totalCommits,
                 stars: 0,
                 recentCommits: r.recentCommits
               })),
+              verifiedSkills: githubEvidenceReport.verifiedSkills,
+              verifiedLanguages: githubEvidenceReport.verifiedLanguages,
+              languageDistribution: githubEvidenceReport.languageDistribution,
               timelineAnomalyAlerts: githubEvidenceReport.timelineFlags.map(f => f.type),
               hasTimelineGaps: githubEvidenceReport.timelineFlags.length > 0
-            };
+            } as any;
             
             resume.skills = githubEvidenceReport.verifiedSkills;
           } catch (githubErr) {
