@@ -94,7 +94,22 @@ export class GeminiProvider {
     return this.genAI !== null;
   }
 
-  private async generateJsonWithFallback(systemPrompt: string, userPrompt: string): Promise<any> {
+  private async generateJsonWithFallback(
+    systemPrompt: string,
+    userPrompt: string,
+    onTrace?: (trace: {
+      provider: string;
+      model: string;
+      prompt: string;
+      response: string;
+      promptTokens?: number | null;
+      completionTokens?: number | null;
+      totalTokens?: number | null;
+      latencyMs: number;
+      status: "SUCCESS" | "ERROR";
+      errorMessage?: string;
+    }) => void
+  ): Promise<any> {
     if (!this.genAI) {
       throw new Error("GEMINI_API_KEY is not configured.");
     }
@@ -102,8 +117,8 @@ export class GeminiProvider {
     let lastError: any = null;
 
     for (const modelName of this.modelChain) {
+      const started = Date.now();
       try {
-        const started = Date.now();
         console.log(`[Gemini AI] Sending request to ${modelName}...`);
 
         const model = this.genAI.getGenerativeModel({
@@ -116,16 +131,41 @@ export class GeminiProvider {
         });
 
         const result = await model.generateContent(userPrompt);
+        const latencyMs = Date.now() - started;
         const text = result.response.text();
         if (!text) {
           throw new Error(`Gemini (${modelName}) returned an empty response.`);
         }
 
+        const usage = (result.response as any)?.usageMetadata;
         const parsed = parseJsonResponse(text);
-        console.log(`[Gemini AI] ✅ ${modelName} completed in ${Date.now() - started}ms`);
+        console.log(`[Gemini AI] ✅ ${modelName} completed in ${latencyMs}ms`);
+        onTrace?.({
+          provider: "gemini",
+          model: modelName,
+          prompt: `[system]\n${systemPrompt}\n\n[user]\n${userPrompt}`,
+          response: text,
+          promptTokens: usage?.promptTokenCount ?? null,
+          completionTokens: usage?.candidatesTokenCount ?? null,
+          totalTokens: usage?.totalTokenCount ?? null,
+          latencyMs,
+          status: "SUCCESS",
+        });
         return parsed;
       } catch (err: any) {
         lastError = err;
+        onTrace?.({
+          provider: "gemini",
+          model: modelName,
+          prompt: `[system]\n${systemPrompt}\n\n[user]\n${userPrompt}`,
+          response: "",
+          promptTokens: null,
+          completionTokens: null,
+          totalTokens: null,
+          latencyMs: Date.now() - started,
+          status: "ERROR",
+          errorMessage: err?.message || String(err),
+        });
         const status = err?.status;
         const msg = String(err?.message || err);
         const isRetryableModelErr =
@@ -153,13 +193,14 @@ export class GeminiProvider {
   public async analyzeCandidate(
     resumeText: string,
     githubMetrics: any,
-    systemPrompt: string
+    systemPrompt: string,
+    onTrace?: (trace: any) => void
   ): Promise<Partial<AuditReport>> {
     const userPrompt = `RESUME:\n${compactResumeText(resumeText, 8000)}\n\nGITHUB:\n${JSON.stringify(
       compactGithubForGemini(githubMetrics)
     )}`;
 
-    return (await this.generateJsonWithFallback(systemPrompt, userPrompt)) as Partial<AuditReport>;
+    return (await this.generateJsonWithFallback(systemPrompt, userPrompt, onTrace)) as Partial<AuditReport>;
   }
 
   public async generateProfessionalReport(data: any): Promise<any> {

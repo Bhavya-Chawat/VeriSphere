@@ -71,3 +71,5 @@ packages/github-engine/github-engine-task.md
 # github-engine
 packages/github-engine/.env
 packages/github-engine/test_api.tsbuildinfo
+
+/docs/diagrams

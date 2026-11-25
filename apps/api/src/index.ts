@@ -9,6 +9,7 @@ import path from "path";
 dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
 import { prisma } from "./infrastructure/db/prisma-client";
+import { initMongoDb, mongoManager } from "./infrastructure/db/mongo-client";
 import { createVerificationRouter } from "./infrastructure/routes/verification-routes";
 import { createForensicsRouter } from "./modules/forensics/forensics.routes";
 import { UploadCandidateUseCase } from "./application/use-cases/upload-candidate";
@@ -120,7 +121,19 @@ const uploadUseCase = new UploadCandidateUseCase(mockCandidateRepo, mockJobRepo,
 
 // Health Check
 app.get("/health", (req, res) => {
-  res.status(200).json({ status: "healthy", timestamp: new Date().toISOString() });
+  const mongo = mongoManager.getStatus();
+  res.status(200).json({
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+    databases: {
+      postgres: "configured",
+      mongodb: mongo.connected
+        ? `connected (${mongo.dbName})`
+        : mongo.configured
+        ? "degraded (retrying)"
+        : "not configured (PostgreSQL-only mode)",
+    },
+  });
 });
 
 // Route mount
@@ -138,4 +151,6 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 app.listen(PORT, () => {
   console.log(`[VeriSphere API] Running on http://localhost:${PORT}`);
+  // Non-blocking MongoDB bootstrap (creates 5 schema-validated collections + indexes + 90d TTL)
+  void initMongoDb();
 });

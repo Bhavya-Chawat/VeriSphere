@@ -39,7 +39,7 @@ const REPOS_BATCH_QUERY = `
   query GetUserReposEvidence($login: String!, $authorId: ID!, $after: String) {
     user(login: $login) {
       repositories(
-        first: 40
+        first: 15
         after: $after
         ownerAffiliations: [OWNER]
         orderBy: { field: PUSHED_AT, direction: DESC }
@@ -173,12 +173,12 @@ export async function scrapeGithubViaGraphQL(
     accountAgeMonths = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24 * 30.4375)));
   }
 
-  // 2. Paginate ALL non-archived repositories (including ALL forks!) in chunks of 40
+  // 2. Paginate ALL non-archived repositories (including ALL forks!) in fast chunks of 15 (avoids GitHub 502 timeouts on 50+ repo profiles)
   const allRepoNodes: any[] = [];
   let cursor: string | null = null;
   let pages = 0;
 
-  while (pages < 4) {
+  while (pages < 10) {
     pages++;
     const reposRes: any = await graphqlRequestWithRetry(octokit, REPOS_BATCH_QUERY, {
       login: username,

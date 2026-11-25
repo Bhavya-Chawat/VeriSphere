@@ -6,6 +6,19 @@ import { AuditReport } from '@verisphere/shared-types';
 // Process-wide dispatch counter to balance concurrent batch traffic across Gemini & Groq
 let dispatchCounter = 0;
 
+export interface LlmTraceEvent {
+  provider: string;
+  model: string;
+  prompt: string;
+  response: string;
+  promptTokens?: number | null;
+  completionTokens?: number | null;
+  totalTokens?: number | null;
+  latencyMs: number;
+  status: 'SUCCESS' | 'ERROR';
+  errorMessage?: string;
+}
+
 export class AILayer {
   private groqProvider: GroqAIProvider;
   private geminiProvider: GeminiProvider;
@@ -38,7 +51,8 @@ export class AILayer {
   public async analyzeCandidate(
     resumeText: string,
     githubMetrics: any,
-    systemPrompt: string
+    systemPrompt: string,
+    onTrace?: (trace: LlmTraceEvent) => void
   ): Promise<Partial<AuditReport>> {
     if (this.useMock) {
       return this.mockProvider.analyzeCandidate(resumeText, githubMetrics);
@@ -51,12 +65,19 @@ export class AILayer {
       throw new Error('Neither GROQ_API_KEY nor GEMINI_API_KEY is set (and MOCK_AI is not true).');
     }
 
-    const runGroq = () => this.groqProvider.analyzeCandidate(resumeText, githubMetrics, systemPrompt);
-    const runGemini = () => this.geminiProvider.analyzeCandidate(resumeText, githubMetrics, systemPrompt);
+    const runGroq = () =>
+      this.groqProvider.analyzeCandidate(resumeText, githubMetrics, systemPrompt, onTrace);
+    const runGemini = () =>
+      this.geminiProvider.analyzeCandidate(resumeText, githubMetrics, systemPrompt, onTrace);
 
     if (groqReady && geminiReady) {
-      // Balance across both providers, but never stall on Groq if its immediate buckets are busy
-      const wantsGroq = dispatchCounter++ % 2 === 0;
+      // Large profiles (25+ repos like 58-repo developers) easily exceed Groq's 8,000 TPM free limit (HTTP 413).
+      // Route them directly to Gemini (1M context window) first while still keeping Groq as failover.
+      const repoCount = Array.isArray(githubMetrics?.analyzedRepos)
+        ? githubMetrics.analyzedRepos.length
+        : 0;
+      const isLargeProfile = repoCount > 25 || (resumeText?.length || 0) > 7000;
+      const wantsGroq = !isLargeProfile && dispatchCounter++ % 2 === 0;
       const useGroqFirst = wantsGroq && this.groqProvider.hasImmediateCapacity(2600);
       const primaryName = useGroqFirst ? 'Groq' : 'Gemini';
       const fallbackName = useGroqFirst ? 'Gemini' : 'Groq';

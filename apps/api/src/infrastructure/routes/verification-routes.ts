@@ -13,6 +13,7 @@ import { authMiddleware } from "../middleware/auth-middleware";
 import { mapRelationalJobToLegacyShape } from "../../application/services/report-mapper";
 import { extractIdentityFromResume } from "../../application/services/resume-identity-extractor";
 import { prisma } from "../db/prisma-client";
+import { mongoEvidenceStore } from "../db/mongo-evidence-store";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -504,7 +505,8 @@ export function createVerificationRouter(
 
   /**
    * GET /api/verification/jobs/:jobId/status
-   * Returns the full VerificationJob with Candidate and AuditReport for polling and report display.
+   * Returns the full VerificationJob with Candidate and AuditReport from PostgreSQL.
+   * Pass `?includeEvidence=true` to attach linked MongoDB evidence documents on request.
    */
   router.get("/jobs/:jobId/status", async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -515,7 +517,105 @@ export function createVerificationRouter(
         throw new ResourceNotFoundError("VerificationJob", jobId);
       }
 
+      if (req.query.includeEvidence === "true") {
+        const mongoEvidence = await mongoEvidenceStore.getEvidenceForJob(jobId);
+        return res.status(200).json({ ...job, mongoEvidence });
+      }
+
       return res.status(200).json(job);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * GET /api/verification/jobs/:jobId/evidence
+   * Fetches all non-orphaned MongoDB evidence documents (raw_resumes, forensics_reports,
+   * github_snapshots, llm_traces, job_events) linked to a PostgreSQL VerificationJob.
+   */
+  router.get("/jobs/:jobId/evidence", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { jobId } = req.params;
+      const pgJob = await prisma.verificationJob.findUnique({
+        where: { id: jobId },
+        select: { id: true, status: true, mongoRef: true },
+      });
+      if (!pgJob) {
+        throw new ResourceNotFoundError("VerificationJob", jobId);
+      }
+
+      const evidence = await mongoEvidenceStore.getEvidenceForJob(jobId);
+      return res.status(200).json({
+        ...evidence,
+        jobId: pgJob.id,
+        status: pgJob.status,
+        mongoRef: pgJob.mongoRef ? JSON.parse(pgJob.mongoRef) : null,
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * GET /api/verification/analytics/mongo/forensic-rules
+   * MongoDB Aggregation Pipeline: Which forensic rules fail most often across candidates?
+   */
+  router.get("/analytics/mongo/forensic-rules", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 15));
+      const rules = await mongoEvidenceStore.getTopFailingForensicRules(limit);
+      return res.status(200).json({ rules });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * GET /api/verification/analytics/mongo/llm-traces
+   * MongoDB Aggregation Pipeline: LLM provider/model latency and token consumption.
+   */
+  router.get("/analytics/mongo/llm-traces", async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const models = await mongoEvidenceStore.getLlmUsageAnalytics();
+      return res.status(200).json({ models });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * GET /api/verification/analytics/mongo/pipeline-steps
+   * MongoDB Aggregation Pipeline: Average duration per verification pipeline step.
+   */
+  router.get("/analytics/mongo/pipeline-steps", async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const steps = await mongoEvidenceStore.getPipelineStepTimings();
+      return res.status(200).json({ steps });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * GET /api/verification/analytics/mongo/overview
+   * Combined MongoDB collection status, orphan counts, and all 3 aggregation pipelines.
+   */
+  router.get("/analytics/mongo/overview", async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const [status, topFailingForensicRules, llmUsage, pipelineSteps] = await Promise.all([
+        mongoEvidenceStore.getStatusSummary(),
+        mongoEvidenceStore.getTopFailingForensicRules(10),
+        mongoEvidenceStore.getLlmUsageAnalytics(),
+        mongoEvidenceStore.getPipelineStepTimings(),
+      ]);
+      return res.status(200).json({
+        status,
+        aggregations: {
+          topFailingForensicRules,
+          llmUsage,
+          pipelineSteps,
+        },
+      });
     } catch (error) {
       next(error);
     }
