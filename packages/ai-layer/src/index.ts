@@ -6,6 +6,19 @@ import { AuditReport } from '@verisphere/shared-types';
 // Process-wide dispatch counter to balance concurrent batch traffic across Gemini & Groq
 let dispatchCounter = 0;
 
+export interface LlmTraceEvent {
+  provider: string;
+  model: string;
+  prompt: string;
+  response: string;
+  promptTokens?: number | null;
+  completionTokens?: number | null;
+  totalTokens?: number | null;
+  latencyMs: number;
+  status: 'SUCCESS' | 'ERROR';
+  errorMessage?: string;
+}
+
 export class AILayer {
   private groqProvider: GroqAIProvider;
   private geminiProvider: GeminiProvider;
@@ -38,7 +51,8 @@ export class AILayer {
   public async analyzeCandidate(
     resumeText: string,
     githubMetrics: any,
-    systemPrompt: string
+    systemPrompt: string,
+    onTrace?: (trace: LlmTraceEvent) => void
   ): Promise<Partial<AuditReport>> {
     if (this.useMock) {
       return this.mockProvider.analyzeCandidate(resumeText, githubMetrics);
@@ -51,8 +65,10 @@ export class AILayer {
       throw new Error('Neither GROQ_API_KEY nor GEMINI_API_KEY is set (and MOCK_AI is not true).');
     }
 
-    const runGroq = () => this.groqProvider.analyzeCandidate(resumeText, githubMetrics, systemPrompt);
-    const runGemini = () => this.geminiProvider.analyzeCandidate(resumeText, githubMetrics, systemPrompt);
+    const runGroq = () =>
+      this.groqProvider.analyzeCandidate(resumeText, githubMetrics, systemPrompt, onTrace);
+    const runGemini = () =>
+      this.geminiProvider.analyzeCandidate(resumeText, githubMetrics, systemPrompt, onTrace);
 
     if (groqReady && geminiReady) {
       // Balance across both providers, but never stall on Groq if its immediate buckets are busy

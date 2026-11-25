@@ -1,4 +1,4 @@
-import { AILayer, SYSTEM_PROMPT_VERIFICATION, TrustCalculator } from '@verisphere/ai-layer';
+import { AILayer, LlmTraceEvent, SYSTEM_PROMPT_VERIFICATION, TrustCalculator } from '@verisphere/ai-layer';
 import { 
   AuditReport, 
   VerificationJob, 
@@ -8,6 +8,7 @@ import {
 import { Severity, SkillSource } from '@prisma/client';
 import { parsePdfBuffer, verifyAcademicProfile } from '@verisphere/forensics-engine';
 import { prisma } from '../infrastructure/db/prisma-client';
+import { mongoEvidenceStore } from '../infrastructure/db/mongo-evidence-store';
 import { verificationQueue } from './services/verification-queue';
 import fs from 'fs';
 import crypto from 'crypto';
@@ -98,15 +99,30 @@ export class VerificationOrchestrator {
     
     // --- STEP 3: AI Layer Analysis ---
     console.log(`[Orchestrator] STEP 3: Calling AI Layer for semantic analysis...`);
+    const aiStepStart = Date.now();
+    const collectedLlmTraces: LlmTraceEvent[] = [];
     const aiResponse: any = await this.aiLayer.analyzeCandidate(
       resume.rawText, 
       githubMetrics, 
-      SYSTEM_PROMPT_VERIFICATION
+      SYSTEM_PROMPT_VERIFICATION,
+      (trace) => {
+        collectedLlmTraces.push(trace);
+      }
     );
 
     if (!aiResponse) {
       throw new Error("AI Layer returned an empty response.");
     }
+    void mongoEvidenceStore.logJobEvent({
+      jobId: job.id,
+      step: 'AI_ANALYZE',
+      status: 'COMPLETED',
+      durationMs: Date.now() - aiStepStart,
+      details: {
+        calls: collectedLlmTraces.length,
+        finalModel: collectedLlmTraces[collectedLlmTraces.length - 1]?.model || 'unknown',
+      },
+    });
 
     // --- STEP 4: Academic Verification ---
     console.log(`[Orchestrator] STEP 4: Running Academic Verification...`);
@@ -191,7 +207,93 @@ export class VerificationOrchestrator {
       trustScore: roundedTrustScore
     };
 
+    // --- STEP 6b: Persist Semi-Structured Evidence to MongoDB (Fail-Open — Outage Never Blocks Verification) ---
+    const mongoWriteStart = Date.now();
+    const [rawResumeDocId, githubSnapshotDocId, forensicsReportDocId, llmTraceDocIds] = await Promise.all([
+      mongoEvidenceStore.saveRawResume({
+        jobId: job.id,
+        candidateId: job.candidateId,
+        fileUrl: resume.fileUrl,
+        rawText: resume.rawText,
+        skills: resume.skills,
+        academicProfile,
+      }),
+      mongoEvidenceStore.saveGithubSnapshot({
+        jobId: job.id,
+        candidateId: job.candidateId,
+        githubMetrics,
+      }),
+      mongoEvidenceStore.saveForensicsReport({
+        jobId: job.id,
+        candidateId: job.candidateId,
+        certificateValidityScore,
+        certificateAnalyses,
+      }),
+      Promise.all(
+        collectedLlmTraces.map((t) =>
+          mongoEvidenceStore.saveLlmTrace({
+            jobId: job.id,
+            candidateId: job.candidateId,
+            provider: t.provider,
+            model: t.model,
+            prompt: t.prompt,
+            response: t.response,
+            promptTokens: t.promptTokens,
+            completionTokens: t.completionTokens,
+            totalTokens: t.totalTokens,
+            latencyMs: t.latencyMs,
+            status: t.status,
+            errorMessage: t.errorMessage,
+          })
+        )
+      ).then((ids) => ids.filter((id): id is string => Boolean(id))),
+    ]);
+
+    const mongoRef = mongoEvidenceStore.buildEvidenceManifest({
+      jobId: job.id,
+      rawResumeDocId,
+      githubSnapshotDocId,
+      forensicsReportDocId,
+      llmTraceDocIds,
+    });
+
+    if (mongoRef) {
+      void mongoEvidenceStore.logJobEvent({
+        jobId: job.id,
+        step: 'MONGO_EVIDENCE',
+        status: 'COMPLETED',
+        durationMs: Date.now() - mongoWriteStart,
+        details: {
+          rawResumeDocId,
+          githubSnapshotDocId,
+          forensicsReportDocId,
+          llmTraceCount: llmTraceDocIds.length,
+        },
+      });
+    }
+
+    const resolveMongoEvidenceRef = (risk: any): string | null => {
+      const riskType = String(risk?.category || risk?.type || '').toUpperCase();
+      if (riskType.includes('CERTIFICATE') && forensicsReportDocId) {
+        return `mongo:forensics_reports:${forensicsReportDocId}`;
+      }
+      if (
+        (riskType.includes('TIMELINE') ||
+          riskType.includes('CLONED') ||
+          riskType.includes('METADATA') ||
+          riskType.includes('GITHUB')) &&
+        githubSnapshotDocId
+      ) {
+        return `mongo:github_snapshots:${githubSnapshotDocId}`;
+      }
+      if (llmTraceDocIds.length > 0 && !risk?.evidence) {
+        return `mongo:llm_traces:${llmTraceDocIds[llmTraceDocIds.length - 1]}`;
+      }
+      return risk?.evidence ? String(risk.evidence) : null;
+    };
+
     // --- STEP 7: Persist to Normalized Database in a Single Transaction ---
+    const pgStart = Date.now();
     try {
       console.log(`[Orchestrator] STEP 7: Saving normalized entities and AuditReport in transaction...`);
 
@@ -228,7 +330,7 @@ export class VerificationOrchestrator {
                 type: String(r.category || r.type || 'GENERAL_ANOMALY'),
                 severity: mapToPrismaSeverity(r.severity || r.level),
                 description: String(r.description || 'Risk flag detected'),
-                evidenceRef: r.evidence ? String(r.evidence) : null
+                evidenceRef: resolveMongoEvidenceRef(r)
               }))
             },
             contradictionItems: {
@@ -421,12 +523,13 @@ export class VerificationOrchestrator {
           }
         }
 
-        // 7g. Update VerificationJob status to COMPLETED
+        // 7g. Update VerificationJob status to COMPLETED + attach MongoDB evidence manifest reference
         await tx.verificationJob.update({
           where: { id: job.id },
           data: {
             status: 'COMPLETED',
             completedAt: new Date(),
+            mongoRef: mongoRef ?? undefined,
             githubMetricsJson: JSON.stringify(githubMetrics),
             resumeDataJson: JSON.stringify(resume),
             certificateDataJson: certificateAnalyses ? JSON.stringify(certificateAnalyses) : undefined
@@ -436,12 +539,25 @@ export class VerificationOrchestrator {
         finalReport.id = createdReport.id;
       }, { maxWait: 15000, timeout: 45000 });
 
+      void mongoEvidenceStore.logJobEvent({
+        jobId: job.id,
+        step: 'POSTGRES_PERSIST',
+        status: 'COMPLETED',
+        durationMs: Date.now() - pgStart,
+        details: { trustScore: roundedTrustScore, hasMongoRef: Boolean(mongoRef) },
+      });
+
       // Debounced materialized view refresh (coalesced across batch completions)
       scheduleMaterializedViewRefresh();
       
       console.log(`[Orchestrator] ✅ Verification complete. Final Score: ${roundedTrustScore}`);
     } catch (dbError: any) {
       console.warn(`[Orchestrator] Failed to save to database:`, dbError.message);
+      // Cross-database compensating rollback: mark MongoDB evidence documents as orphaned
+      await mongoEvidenceStore.markJobDocumentsOrphaned(
+        job.id,
+        `PostgreSQL transaction failed: ${dbError?.message || String(dbError)}`
+      );
       throw dbError;
     }
     
@@ -487,6 +603,7 @@ export class VerificationOrchestrator {
         };
 
         // --- STEP 1: Parse Resume PDF (reuse preParsedText if already extracted during bulk intake) ---
+        const parseStepStart = Date.now();
         let rawText = `${candidateRecord.firstName} ${candidateRecord.lastName} - Candidate Profile.`;
         
         if (preParsedText && preParsedText.trim().length > 20) {
@@ -504,6 +621,13 @@ export class VerificationOrchestrator {
         } else {
           console.log(`[Orchestrator] STEP 1: No PDF file found, using candidate name as context.`);
         }
+        void mongoEvidenceStore.logJobEvent({
+          jobId,
+          step: 'PARSE_RESUME',
+          status: 'COMPLETED',
+          durationMs: Date.now() - parseStepStart,
+          details: { chars: rawText.length },
+        });
 
         const resume: ResumeData = {
           id: `res_${Date.now()}`,
@@ -532,6 +656,7 @@ export class VerificationOrchestrator {
         };
 
         if (candidateRecord.githubUrl) {
+          const ghStepStart = Date.now();
           try {
             console.log(`[Orchestrator] STEP 2: Fetching live GitHub evidence for ${candidateRecord.githubUrl}`);
             const { scrapeGithubEvidence } = await import('@verisphere/github-engine');
@@ -566,8 +691,25 @@ export class VerificationOrchestrator {
             } as any;
             
             resume.skills = githubEvidenceReport.verifiedSkills;
+            void mongoEvidenceStore.logJobEvent({
+              jobId,
+              step: 'GITHUB_SCRAPE',
+              status: 'COMPLETED',
+              durationMs: Date.now() - ghStepStart,
+              details: {
+                username: githubEvidenceReport.username,
+                repos: githubEvidenceReport.repositories.length,
+              },
+            });
           } catch (githubErr) {
             console.error(`[Orchestrator] STEP 2: GitHub scraping failed:`, githubErr);
+            void mongoEvidenceStore.logJobEvent({
+              jobId,
+              step: 'GITHUB_SCRAPE',
+              status: 'FAILED',
+              durationMs: Date.now() - ghStepStart,
+              details: { error: githubErr instanceof Error ? githubErr.message : String(githubErr) },
+            });
           }
         } else {
           console.log(`[Orchestrator] STEP 2: No GitHub URL provided, skipping.`);

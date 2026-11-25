@@ -134,7 +134,19 @@ export class GroqAIProvider {
 
   private async callWithRetry(
     messages: Array<{ role: 'system' | 'user'; content: string }>,
-    buildUltraCompactUserPrompt?: () => string
+    buildUltraCompactUserPrompt?: () => string,
+    onTrace?: (trace: {
+      provider: string;
+      model: string;
+      prompt: string;
+      response: string;
+      promptTokens?: number | null;
+      completionTokens?: number | null;
+      totalTokens?: number | null;
+      latencyMs: number;
+      status: 'SUCCESS' | 'ERROR';
+      errorMessage?: string;
+    }) => void
   ): Promise<string> {
     const maxAttempts = 5;
     let currentMessages = messages;
@@ -145,8 +157,8 @@ export class GroqAIProvider {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       const model = await this.acquireBestModel(estTokens, rateLimitedModels);
 
+      const started = Date.now();
       try {
-        const started = Date.now();
         console.log(`[Groq AI] Sending compact request to ${model}...`);
         const completion = await this.groq.chat.completions.create({
           messages: currentMessages,
@@ -155,13 +167,37 @@ export class GroqAIProvider {
           response_format: { type: 'json_object' },
         });
 
+        const latencyMs = Date.now() - started;
         const resultString = completion.choices[0]?.message?.content;
         if (!resultString) {
           throw new Error(`Groq (${model}) returned empty response`);
         }
-        console.log(`[Groq AI] ✅ ${model} completed in ${Date.now() - started}ms`);
+        console.log(`[Groq AI] ✅ ${model} completed in ${latencyMs}ms`);
+        onTrace?.({
+          provider: 'groq',
+          model,
+          prompt: currentMessages.map((m) => `[${m.role}]\n${m.content}`).join('\n\n'),
+          response: resultString,
+          promptTokens: completion.usage?.prompt_tokens ?? null,
+          completionTokens: completion.usage?.completion_tokens ?? null,
+          totalTokens: completion.usage?.total_tokens ?? null,
+          latencyMs,
+          status: 'SUCCESS',
+        });
         return resultString;
       } catch (error: any) {
+        onTrace?.({
+          provider: 'groq',
+          model,
+          prompt: currentMessages.map((m) => `[${m.role}]\n${m.content}`).join('\n\n'),
+          response: '',
+          promptTokens: null,
+          completionTokens: null,
+          totalTokens: null,
+          latencyMs: Date.now() - started,
+          status: 'ERROR',
+          errorMessage: error?.message || String(error),
+        });
         const status = error?.status;
         const retryAfterHeader = error?.headers?.['retry-after'];
         const isPayloadTooLarge = status === 413;
@@ -217,7 +253,8 @@ export class GroqAIProvider {
   public async analyzeCandidate(
     resumeText: string,
     githubMetrics: any,
-    systemPrompt: string
+    systemPrompt: string,
+    onTrace?: (trace: any) => void
   ): Promise<Partial<AuditReport>> {
     const buildPrompt = (ultraCompact: boolean) => {
       const trimmedResume = compactResumeText(resumeText, ultraCompact ? 3800 : 6200);
@@ -230,7 +267,8 @@ export class GroqAIProvider {
         { role: 'system', content: systemPrompt },
         { role: 'user', content: buildPrompt(false) },
       ],
-      () => buildPrompt(true)
+      () => buildPrompt(true),
+      onTrace
     );
 
     return JSON.parse(resultString) as Partial<AuditReport>;
