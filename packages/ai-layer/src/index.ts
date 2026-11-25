@@ -71,8 +71,13 @@ export class AILayer {
       this.geminiProvider.analyzeCandidate(resumeText, githubMetrics, systemPrompt, onTrace);
 
     if (groqReady && geminiReady) {
-      // Balance across both providers, but never stall on Groq if its immediate buckets are busy
-      const wantsGroq = dispatchCounter++ % 2 === 0;
+      // Large profiles (25+ repos like 58-repo developers) easily exceed Groq's 8,000 TPM free limit (HTTP 413).
+      // Route them directly to Gemini (1M context window) first while still keeping Groq as failover.
+      const repoCount = Array.isArray(githubMetrics?.analyzedRepos)
+        ? githubMetrics.analyzedRepos.length
+        : 0;
+      const isLargeProfile = repoCount > 25 || (resumeText?.length || 0) > 7000;
+      const wantsGroq = !isLargeProfile && dispatchCounter++ % 2 === 0;
       const useGroqFirst = wantsGroq && this.groqProvider.hasImmediateCapacity(2600);
       const primaryName = useGroqFirst ? 'Groq' : 'Gemini';
       const fallbackName = useGroqFirst ? 'Gemini' : 'Groq';

@@ -32,8 +32,8 @@ function compactGithubMetrics(metrics: any, ultraCompact: boolean = false): any 
       lang: r.language || 'Unknown',
       commits: r.commits || 0,
     };
-    if (Array.isArray(r.technologies) && r.technologies.length > 0) {
-      item.tech = r.technologies;
+    if (!ultraCompact && Array.isArray(r.technologies) && r.technologies.length > 0) {
+      item.tech = r.technologies.slice(0, 8);
     }
     if (!ultraCompact && Array.isArray(r.recentCommits) && r.recentCommits.length > 0) {
       item.msgs = r.recentCommits
